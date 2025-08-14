@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-test-app
+  namespace: starfall-test
+  labels:
+    app: nginx-test-app
+    "starfall.io/enabled": "true"
+  #  owner: matteo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-test-app
+  template:
+    metadata:
+      labels:
+        app: nginx-test-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /           
+            port: 80           
+          periodSeconds: 20      
+          timeoutSeconds: 5       
+          failureThreshold: 3   # After 3 consecutive failures, restart the container

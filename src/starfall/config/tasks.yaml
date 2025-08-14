@@ -1,7 +1,7 @@
 research_task:
   description: >
     Scan a Kubernetes cluster for namespaces and deployments with the label
-    starfall.enabled=true and return a structured JSON with:
+    starfall.io/enabled and return a structured JSON with:
     - namespace
     - deployment name
     - container image(s)
