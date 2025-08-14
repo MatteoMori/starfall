@@ -1,0 +1,28 @@
+research_task:
+  description: >
+    Scan a Kubernetes cluster for namespaces and deployments with the label
+    starfall.enabled=true and return a structured JSON with:
+    - namespace
+    - deployment name
+    - container image(s)
+    - image tag(s)
+
+  expected_output: >
+    A JSON array of objects with namespace, deployment names, and container image details
+    for all matching deployments.
+
+  agent: platform_enginner
+
+# reporting_task:
+#   description: >
+#     Review the scanner results and find out what new features, improvements,
+#     and fixes have been introduced in the latest available versions for
+#     each deployment. Answer the question:
+#     "Why are we upgrading? What features will make our consumers happier?"
+#     Highlight only the most impactful changes for users.
+
+#   expected_output: >
+#     A concise, well-structured markdown report explaining the top reasons
+#     to upgrade, focusing on user-visible features and tangible improvements.
+
+#   agent: reporting_analyst
