@@ -1,4 +1,8 @@
-# starfall
+# Starfall
+
+<img src="./imgs/20250814_112206603_iOS.jpg" width="150">
+
+----
 
 Starfall is an “Upgrade Copilot” — an AI-powered assistant that automates the boring, error-prone upgrade research for Kubernetes clusters and their installed tools.
 

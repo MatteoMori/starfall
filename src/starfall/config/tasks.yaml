@@ -13,6 +13,19 @@ research_task:
 
   agent: platform_enginner
 
+technical_web_search_task:
+  description: >
+    Search the web for release notes, features, and breaking changes for
+    Platform Engineering tooling, focusing on Kubernetes 1.32.
+    You want to find the latest updates, improvements, and any breaking changes
+    that could impact our deployments.
+
+  expected_output: >
+    A structured summary of the latest release notes, features, and breaking changes
+    for the specified tools, including links to the original sources.
+
+  agent: technical_web_searcher
+
 # reporting_task:
 #   description: >
 #     Review the scanner results and find out what new features, improvements,
