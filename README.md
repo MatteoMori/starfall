@@ -1,6 +1,6 @@
 # Starfall
 
-<img src="./imgs/20250814_112206603_iOS.jpg" width="150">
+<img src="./imgs/logo/20250814_112206603_iOS.jpg" width="150">
 
 ----
 

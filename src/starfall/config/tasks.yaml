@@ -1,30 +1,33 @@
-research_task:
+k8s_cluster_scanner:
   description: >
-    Scan a Kubernetes cluster for namespaces and deployments with the label
-    starfall.io/enabled and return a structured JSON with:
-    - namespace
-    - deployment name
-    - container image(s)
-    - image tag(s)
+    Scan the Kubernetes cluster for namespaces and deployments labeled with "starfall.io/enabled=true".
+    Collect detailed information about each matching deployment, including:
+      - Namespace
+      - Deployment name
+      - All container names, images, and image tags
+      - Deployment labels
+    Also, retrieve cluster version, cluster name, and the scan timestamp.
+    Output the results as a structured report for downstream analysis and automation.
 
   expected_output: >
-    A JSON array of objects with namespace, deployment names, and container image details
-    for all matching deployments.
+    A validated K8sClusterScanResult object containing:
+      - cluster: { version, name, scanned_at }
+      - apps: list of deployments, each with { name, namespace, deployment, containers: [name, image, current_version], labels }
 
-  agent: platform_enginner
+  agent: platform_engineer
 
-technical_web_search_task:
-  description: >
-    Search the web for release notes, features, and breaking changes for
-    Platform Engineering tooling, focusing on Kubernetes 1.32.
-    You want to find the latest updates, improvements, and any breaking changes
-    that could impact our deployments.
+# technical_web_search_task:
+#   description: >
+#     Search the web for release notes, features, and breaking changes for
+#     Platform Engineering tooling, focusing on Kubernetes 1.32.
+#     You want to find the latest updates, improvements, and any breaking changes
+#     that could impact our deployments.
 
-  expected_output: >
-    A structured summary of the latest release notes, features, and breaking changes
-    for the specified tools, including links to the original sources.
+#   expected_output: >
+#     A structured summary of the latest release notes, features, and breaking changes
+#     for the specified tools, including links to the original sources.
 
-  agent: technical_web_searcher
+#   agent: technical_web_searcher
 
 # reporting_task:
 #   description: >

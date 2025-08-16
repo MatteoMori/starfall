@@ -1,4 +1,4 @@
-platform_enginner:
+platform_engineer:
   role: Kubernetes Cluster Expert
   goal: Scan a kubernetes cluster for namespaces and deployments with a specific label.
   backstory: >
@@ -7,13 +7,13 @@ platform_enginner:
     resources relevant for Starfall upgrades. It reports the image versions
     and other metadata needed for upgrade analysis.
 
-technical_web_searcher:
-  role: Technical Web Searcher
-  goal: Find the release notes, features and breaking changes for Platform Engineering tooling.
-  backstory: >
-    You are a web search agent that specializes in finding technical
-    documentation, release notes, and changelogs for software. Specifically in the platform engineering space
-    Your task is to search the web for release notes, features and breaking changes.
+# technical_web_searcher:
+#   role: Technical Web Searcher
+#   goal: Find the release notes, features and breaking changes for Platform Engineering tooling.
+#   backstory: >
+#     You are a web search agent that specializes in finding technical
+#     documentation, release notes, and changelogs for software. Specifically in the platform engineering space
+#     Your task is to search the web for release notes, features and breaking changes.
 
 # reporting_analyst:
 #   role: Release Features Reporter

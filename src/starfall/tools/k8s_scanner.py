@@ -1,151 +1,86 @@
-#import os
 from crewai.tools import BaseTool
 from typing import List, Dict, Any
-# from pydantic import BaseModel, Field
 from kubernetes import client, config
+from datetime import datetime
+
+from starfall.pydantic_models import K8sClusterScanResult, ClusterInfo, AppInfo, ContainerInfo
+
 
 class ScanK8sCluster(BaseTool):
-    name: str = "Scan a Kubernetes Cluster"
+    name: str = "Scan a Kubernetes Cluster looking for the kubernetes version and Applications to upgrade"
     description: str = (
         "Scan a Kubernetes cluster, namespaces and deployments that share the same label key and value. "
-        "The label is starfall.io/enabled = true"
-        "Returns a list of deployments with name, namespace, and version."
+        "The label is starfall.io/enabled = true. "
+        "Returns a structured dictionary with cluster version, name, scan time, and a list of apps with deployment, namespace, container images, versions, and labels."
     )
 
-    #def _run(self, label_value: str) -> List[Dict[str, Any]]:
-    def _run(self) -> List[Dict[str, Any]]:
-        # Mock output for testing
-        # return [
-        #     {"namespace": "default", "deployment_name": "frontend", "version": "1.2.3"},
-        #     {"namespace": "default", "deployment_name": "backend", "version": "4.5.6"},
-        # ]
-
-        # Define the label to use when filtering. 
-        # TODO: Make this configurable via environment variable or input
+    def _run(self) -> K8sClusterScanResult:
         label_key = "starfall.io/enabled"
         label_value = "true"
         label_selector = f"{label_key}={label_value}"
 
-        # The main Tool logic.
-        print("[DEBUG] Starting main tool logic")
         try:
             # Load Kubernetes config (in-cluster first, fallback to local kubeconfig)
             try:
                 config.load_incluster_config()
-                print("[DEBUG] Loaded in-cluster Kubernetes config")
-            except:
+            except Exception:
                 config.load_kube_config()
-                print("[DEBUG] Loaded local kubeconfig")
 
             v1 = client.CoreV1Api()
             apps_v1 = client.AppsV1Api()
 
+            # Get cluster version
+            version_info = client.VersionApi().get_code()
+            cluster_version = getattr(version_info, "git_version", "unknown")
+
+            # Cluster name: could use kube-context or fallback
+            cluster_name = "unknown"  # You can customize this if you have a way to fetch it
+
+            scanned_at = datetime.utcnow().isoformat() + "Z"
+
             # Get namespaces matching the label
             namespaces = v1.list_namespace(label_selector=label_selector)
             ns_names = [ns.metadata.name for ns in namespaces.items]
-            print(f"[DEBUG] Matching namespaces: {ns_names}")
 
-            # "Results" will hold the deployments found
-            results = []
+            apps = []
             for ns in ns_names:
                 deployments = apps_v1.list_namespaced_deployment(
                     ns, label_selector=label_selector
                 )
-                print(f"[DEBUG] Found {len(deployments.items)} deployments in namespace '{ns}'")
-
                 for dep in deployments.items:
-                    # Lookup the version from labels first
-                    # If not found, fallback to the image tag
-                    version = dep.metadata.labels.get("app.kubernetes.io/version")
+                    dep_labels = dep.metadata.labels or {}
                     containers_info = []
-
-                    # Loop through all containers in the deployment
                     for container in dep.spec.template.spec.containers:
                         image = container.image
                         image_tag = image.split(":")[1] if ":" in image else "unknown"
-                        containers_info.append({
-                            "container_name": container.name,
-                            "image_tag": image_tag
-                        })
+                        containers_info.append(
+                            ContainerInfo(
+                                name=container.name,
+                                image=image,
+                                current_version=image_tag
+                            )
+                        )
+                    app_info = AppInfo(
+                        name=dep.metadata.name,
+                        namespace=ns,
+                        deployment=dep.metadata.name,
+                        containers=containers_info,
+                        labels=dep_labels
+                    )
+                    apps.append(app_info)
 
-                    dep_info = {
-                        "deployment_name": dep.metadata.name,
-                        "namespace": ns,
-                        "version": version if version else "unknown",
-                        "containers": containers_info
-                    }
-                    print(f"[DEBUG] Deployment found: {dep_info}")
-                    results.append(dep_info)
-            print(f"[DEBUG] Total deployments found: {len(results)}")
-            return results
+            cluster_info = ClusterInfo(
+                version=cluster_version,
+                name=cluster_name,
+                scanned_at=scanned_at
+            )
+
+            result = K8sClusterScanResult(
+                cluster=cluster_info,
+                apps=apps
+            )
+            return result
 
         except Exception as e:
-            print(f"[ERROR] Exception during cluster scan: {e}")
-            return [{"error": str(e)}]
-
-
-
-# class ScanClusterLabeledTool(BaseTool):
-#     name: str = "scan_cluster_labeled"
-#     description: str = (
-#         "Scans Kubernetes namespaces and deployments that share the same label key and value. "
-#         "The label key is read from the STARFALL_LABEL_KEY environment variable "
-#         "(default: 'starfall.enabled'). Returns a list of deployments with name, namespace, and version."
-#     )
-#     args_schema: Type[BaseModel] = ScanClusterInput
-
-#     def _run(self, label_value: str) -> List[Dict[str, Any]]:
-#         label_key = os.getenv("STARFALL_LABEL_KEY", "starfall.enabled")
-#         label_selector = f"{label_key}={label_value}"
-
-#         print(f"[DEBUG] Using label selector: {label_selector}")
-
-#         try:
-#             # Load Kubernetes config (in-cluster first, fallback to local kubeconfig)
-#             try:
-#                 config.load_incluster_config()
-#                 print("[DEBUG] Loaded in-cluster Kubernetes config")
-#             except:
-#                 config.load_kube_config()
-#                 print("[DEBUG] Loaded local kubeconfig")
-
-#             v1 = client.CoreV1Api()
-#             apps_v1 = client.AppsV1Api()
-
-#             # Get namespaces matching the label
-#             namespaces = v1.list_namespace(label_selector=label_selector)
-#             ns_names = [ns.metadata.name for ns in namespaces.items]
-#             print(f"[DEBUG] Matching namespaces: {ns_names}")
-
-#             results = []
-#             for ns in ns_names:
-#                 deployments = apps_v1.list_namespaced_deployment(
-#                     ns, label_selector=label_selector
-#                 )
-#                 print(f"[DEBUG] Found {len(deployments.items)} deployments in namespace '{ns}'")
-
-#                 for dep in deployments.items:
-#                     # Try label first
-#                     version = dep.metadata.labels.get("app.kubernetes.io/version")
-#                     if not version:
-#                         # Fallback to image tag
-#                         try:
-#                             image = dep.spec.template.spec.containers[0].image
-#                             version = image.split(":")[1] if ":" in image else "unknown"
-#                         except Exception:
-#                             version = "unknown"
-
-#                     dep_info = {
-#                         "name": dep.metadata.name,
-#                         "namespace": ns,
-#                         "version": version
-#                     }
-#                     print(f"[DEBUG] Deployment found: {dep_info}")
-#                     results.append(dep_info)
-
-#             print(f"[DEBUG] Total deployments found: {len(results)}")
-#             return results
-
-#         except Exception as e:
-#             print(f"[ERROR] Exception during cluster scan: {e}")
-#             return [{"error": str(e)}]
+            # Optionally: You can return a K8sClusterScanResult with an error app entry or raise
+            raise RuntimeError(f"Exception during cluster scan: {e}")

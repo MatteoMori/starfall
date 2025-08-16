@@ -9,6 +9,8 @@ from crewai_tools import BraveSearchTool, ScrapeWebsiteTool
 # Import your tool so CrewAI can register it
 from starfall.tools.k8s_scanner import ScanK8sCluster
 
+from starfall.pydantic_models import K8sClusterScanResult
+# globals()["K8sClusterScanResult"] = K8sClusterScanResult
 
 # Initialize tools
 brave_search_tool = BraveSearchTool(
@@ -27,34 +29,35 @@ class Starfall():
     tasks: List[Task]
 
     @agent
-    def platform_enginner(self) -> Agent:
+    def platform_engineer(self) -> Agent:
         return Agent(
-            config=self.agents_config['platform_enginner'],  # type: ignore[index]
+            config=self.agents_config['platform_engineer'],  # type: ignore[index]
             verbose=True,
             tools=[ScanK8sCluster()]
         )
 
-    @agent
-    def technical_web_searcher(self) -> Agent:
-        return Agent(
-            config=self.agents_config['technical_web_searcher'],
-            verbose=True,
-            tools=[brave_search_tool, scrape_website_tool]
-        )
+    # @agent
+    # def technical_web_searcher(self) -> Agent:
+    #     return Agent(
+    #         config=self.agents_config['technical_web_searcher'],
+    #         verbose=True,
+    #         tools=[brave_search_tool, scrape_website_tool]
+    #     )
 
     @task
-    def research_task(self) -> Task:
+    def k8s_cluster_scanner(self) -> Task:
         return Task(
-            config=self.tasks_config['research_task'],  # type: ignore[index]
-            output_file='report.md'
+            config=self.tasks_config['k8s_cluster_scanner'],  # type: ignore[index]
+            output_file='report.md',
+            output_pydantic=K8sClusterScanResult
         )
 
-    @task
-    def technical_web_search_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['technical_web_search_task'],  # type: ignore[index]
-            output_file='report2.md'
-        )
+    # @task
+    # def technical_web_search_task(self) -> Task:
+    #     return Task(
+    #         config=self.tasks_config['technical_web_search_task'],  # type: ignore[index]
+    #         output_file='report2.md'
+    #     )
 
     @crew
     def crew(self) -> Crew:
