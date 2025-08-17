@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: nginx:1.27.0
         ports:
         - containerPort: 80
         livenessProbe:
@@ -29,3 +29,34 @@ spec:
           periodSeconds: 20      
           timeoutSeconds: 5       
           failureThreshold: 3   # After 3 consecutive failures, restart the container
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-test-app
+  namespace: starfall-test
+  labels:
+    app: redis-test-app
+    "starfall.io/enabled": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-test-app
+  template:
+    metadata:
+      labels:
+        app: redis-test-app
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.2.0
+        ports:
+        - containerPort: 6379
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
