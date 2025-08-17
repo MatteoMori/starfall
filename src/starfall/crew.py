@@ -3,23 +3,25 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 
-# Import web search tools
+# Import Off the shelf tools
 from crewai_tools import BraveSearchTool, ScrapeWebsiteTool
 
-# Import your tool so CrewAI can register it
+# Import Custom tools
 from starfall.tools.k8s_scanner import ScanK8sCluster
 
-from starfall.pydantic_models import K8sClusterScanResult
-# globals()["K8sClusterScanResult"] = K8sClusterScanResult
+# Import Pydantic models
+from starfall.pydantic_models import K8sClusterScanResult # Used for K8s Scanner Agent output
 
-# Initialize tools
+
+# Initialize Web search tool
 brave_search_tool = BraveSearchTool(
-    #search_query="Kubeentes version: 1.32", # TODO: This will need to come from an Agent output
-    #country="UK",
-    n_results=5,
+    n_results=10,
 )
 
+# Initialize Web scrape tool
 scrape_website_tool = ScrapeWebsiteTool()
+
+
 
 @CrewBase
 class Starfall():
@@ -36,6 +38,14 @@ class Starfall():
             tools=[ScanK8sCluster()]
         )
 
+    @agent
+    def latest_version_discovery_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['latest_version_discovery_agent'],
+            verbose=True,
+            tools=[brave_search_tool, scrape_website_tool]
+        )
+
     # @agent
     # def technical_web_searcher(self) -> Agent:
     #     return Agent(
@@ -48,8 +58,17 @@ class Starfall():
     def k8s_cluster_scanner(self) -> Task:
         return Task(
             config=self.tasks_config['k8s_cluster_scanner'],  # type: ignore[index]
-            output_file='report.md',
+            output_file='outputs/k8s_scanner_report_current.md',
             output_pydantic=K8sClusterScanResult
+        )
+
+    @task
+    def latest_version_discovery_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['latest_version_discovery_task'],  # type: ignore[index]
+            output_pydantic=K8sClusterScanResult,
+            output_file='outputs/k8s_scanner_report_full.md',
+            #context=[self.k8s_cluster_scanner]
         )
 
     # @task

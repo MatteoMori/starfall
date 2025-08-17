@@ -6,12 +6,22 @@ from datetime import datetime
 from starfall.pydantic_models import K8sClusterScanResult, ClusterInfo, AppInfo, ContainerInfo
 
 
+# class ScanK8sCluster(BaseTool):
+#     name: str = "Scan a Kubernetes Cluster looking for the kubernetes version and Applications to upgrade"
+#     description: str = (
+#         "Scan a Kubernetes cluster, namespaces and deployments that share the same label key and value. "
+#         "The label is starfall.io/enabled = true. "
+#         "Returns a structured dictionary with cluster version, name, scan time, and a list of apps with deployment, namespace, container images, versions, and labels."
+#     )
 class ScanK8sCluster(BaseTool):
-    name: str = "Scan a Kubernetes Cluster looking for the kubernetes version and Applications to upgrade"
+    name: str = "Kubernetes Control Plane and Application Inventory Scanner"
     description: str = (
-        "Scan a Kubernetes cluster, namespaces and deployments that share the same label key and value. "
-        "The label is starfall.io/enabled = true. "
-        "Returns a structured dictionary with cluster version, name, scan time, and a list of apps with deployment, namespace, container images, versions, and labels."
+        "Performs a comprehensive scan of a Kubernetes cluster and its workloads to inventory upgrade candidates."
+        "Identifies all namespaces and deployments explicitly labeled with 'starfall.io/enabled=true', and gathers detailed metadata for each: "
+        "deployment name, namespace, containers (including image and version), and all deployment labels. "
+        "Also retrieves the current Kubernetes control plane version, cluster name or identifier, and a precise scan timestamp. "
+        "Produces a structured dictionary suitable for downstream upgrade planning, compliance checks, and automation. "
+        "Excludes any resources not matching the label criteria. Does not modify cluster state."
     )
 
     def _run(self) -> K8sClusterScanResult:
@@ -32,9 +42,6 @@ class ScanK8sCluster(BaseTool):
             # Get cluster version
             version_info = client.VersionApi().get_code()
             cluster_version = getattr(version_info, "git_version", "unknown")
-
-            # Cluster name: could use kube-context or fallback
-            cluster_name = "unknown"  # You can customize this if you have a way to fetch it
 
             scanned_at = datetime.utcnow().isoformat() + "Z"
 
@@ -57,7 +64,9 @@ class ScanK8sCluster(BaseTool):
                             ContainerInfo(
                                 name=container.name,
                                 image=image,
-                                current_version=image_tag
+                                current_version=image_tag,
+                                latest_version=None,               
+                                latest_version_info_url=None
                             )
                         )
                     app_info = AppInfo(
@@ -70,13 +79,15 @@ class ScanK8sCluster(BaseTool):
                     apps.append(app_info)
 
             cluster_info = ClusterInfo(
-                version=cluster_version,
-                name=cluster_name,
-                scanned_at=scanned_at
+                current_version=cluster_version,
+                name="Kubernetes",
+                scanned_at=scanned_at,
+                latest_version=None,
+                latest_version_info_url=None
             )
 
             result = K8sClusterScanResult(
-                cluster=cluster_info,
+                kubernetes_control_plane=cluster_info,
                 apps=apps
             )
             return result
