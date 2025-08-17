@@ -4,7 +4,7 @@
 
 ----
 
-Starfall is an “Upgrade Copilot” — an AI-powered assistant that automates the boring, error-prone upgrade research for Kubernetes clusters and their installed tools.
+Starfall is an “Upgrade Helper” — an AI-powered assistant that automates the boring, error-prone upgrade research for Kubernetes clusters and their installed tools.
 
 Instead of you manually checking:
 - “What version of Grafana is running?”
