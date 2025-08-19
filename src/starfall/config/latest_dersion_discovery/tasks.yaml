@@ -1,0 +1,44 @@
+latest_version_discovery_manager_task:
+  description: >
+    You are given a JSON object representing the complete scan of a Kubernetes cluster. 
+    Your primary task is to orchestrate the discovery of the latest stable versions for each application, container, and the Kubernetes control plane within the scan.
+    For each item in the scan:
+      - Delegate the version discovery task to a Software Release Intelligence Specialist agent, providing the single item's JSON as input.
+      - Collect the resulting enriched JSON from each specialist agent.
+    Once you have received the enriched JSON for all items, integrate the updates into the original cluster scan report.
+    You MUST ensure that every application, container, and the control plane is processed and that the 'latest_version' and 'latest_version_info_url' fields are accurately populated using the data provided by the specialist agents.
+    Your final output will be a complete, fully-updated JSON object.
+  expected_output: >
+    A complete JSON object representing the entire Kubernetes cluster scan, enriched with the following updates:
+      - For each application and container:
+        - 'latest_version': The latest available stable release version string (if found). If no stable version is found, this field should be null.
+        - 'latest_version_info_url': A direct URL to the official release notes or version listing for the 'latest_version'. If no stable version is found, this field should be null.
+      - For the Kubernetes control plane:
+        - 'latest_version': The latest available Kubernetes release version string (if found). If no stable version is found, this field should be null.
+        - 'latest_version_info_url': A direct URL to the official Kubernetes release notes or version listing for the 'latest_version'. If no stable version is found, this field should be null.
+    All other fields and data from the original cluster scan MUST be preserved in the output.
+
+
+latest_version_discovery_task:
+  description: >
+    You receive an input JSON object representing either the Kubernetes control plane 
+    or a single application/container from the cluster scan. 
+    Your task is to inspect ONLY this item and determine the latest available stable version and release information URL.
+    For the control plane:
+      - Search only the official Kubernetes releases page or site for the latest stable version.
+      - Update 'latest_version' and 'latest_version_info_url' fields in the input JSON accordingly.
+    For applications/containers:
+      - For the given container, search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software.
+      - Update the 'latest_version' and 'latest_version_info_url' fields in the input JSON accordingly.
+    Do NOT use DockerHub, third-party registries, or unofficial sources.
+    Do NOT perform upgrade analysis or summarize release notes.
+    Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.
+    If you cannot find a version, leave the fields as null, but do not remove any other fields from the input JSON.
+
+  expected_output: >
+    The output must match the input JSON structure, with the addition or update of:
+      - latest_version: <Latest available stable release version string>
+      - latest_version_info_url: <URL to official release notes or version listing>
+    All other fields must be preserved as in the input.
+
+  #agent: latest_version_discovery_agent
