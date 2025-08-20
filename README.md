@@ -103,3 +103,17 @@ The project will contain these essential files:
 |crew.py|	Crew orchestration and coordination|
 |tools/	| Directory for custom agent tools|
 |knowledge/|	Directory for knowledge base|
+
+
+
+# Note about Task delegation
+
+The manger needs to pass a task to coworkers in this exact format
+
+```
+  {
+    "task": "Find the latest stable version for the container 'redis' in the app 'redis-test-app'",
+    "context": "The app object is {\"name\": \"redis-test-app\", \"namespace\": \"starfall-test\", \"deployment\": \"redis-test-app\", \"containers\": [{\"name\": \"redis\", \"image\": \"redis:7.2.0\", \"current_version\": \"7.2.0\"}], \"labels\": {\"app\": \"redis-test-app\", \"starfall.io/enabled\": \"true\"}}",
+    "coworker": "Software Release Intelligence Specialist"
+  }
+```

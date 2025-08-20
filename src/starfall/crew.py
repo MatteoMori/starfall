@@ -64,7 +64,7 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
         verbose=True,
     )
 
-# --- VersionDiscovery Crew (Refactored for hierarchical process) ---
+# --- VersionDiscovery Crew (Final Hierarchical Attempt) ---
 def create_version_discovery_crew() -> Crew:
     """
     Creates a hierarchical crew for discovering the latest versions.
@@ -72,10 +72,8 @@ def create_version_discovery_crew() -> Crew:
     """
     manager_agent = Agent(
         role='Software Release Version Manager',
-        goal="""Coordinate and delegate tasks to specialized agents to update a JSON report with accurate, authoritative latest release information. Your ONLY job is to orchestrate the process.""",
-        backstory="""You are the process orchestrator for software release intelligence. You receive a cluster scan JSON report, 
-        break down the work, and delegate each specific latest release lookup to a trusted specialist. You are FORBIDDEN from performing any research yourself.
-        Your ONLY job is to delegate tasks to your specialized coworker and then meticulously combine their results into a comprehensive, fully-updated report.""",
+        goal="""As the ultimate delegator, coordinate and break down tasks to the 'Software Release Intelligence Specialist' to update a JSON report. Your sole purpose is to split the work and send it piece by piece.""",
+        backstory="""You are the process orchestrator for software release intelligence. Your reputation is built on your ability to break down complex tasks and delegate them one at a time. You receive a cluster scan JSON report, identify each component, and delegate each specific latest release lookup to your coworker, the 'Software Release Intelligence Specialist'. You are FORBIDDEN from performing any research yourself. Your ONLY job is to delegate tasks one-by-one and then meticulously combine their results into a comprehensive, fully-updated report.""",
         verbose=True,
         allow_delegation=True,
     )
@@ -89,28 +87,9 @@ def create_version_discovery_crew() -> Crew:
         verbose=True,
     )
 
-    # This is the SINGLE task given to the hierarchical crew. The manager will handle it.
-    manager_task = Task(
-        description="""You have been provided with a JSON string representing a Kubernetes cluster scan report: {k8s_data}.
-Your primary task is to orchestrate the discovery of the latest stable versions for each item in the report.
-
-**Process:**
-1.  First, parse the provided JSON string `{k8s_data}` into a structured object.
-2.  Identify the 'kubernetes_control_plane' object and delegate a task to the 'Software Release Intelligence Specialist' to find its latest version. The input for this delegation must be ONLY the content of the 'kubernetes_control_plane' key.
-3.  Next, iterate through the 'apps' array. For EACH application object within this array, delegate a task to the 'Software Release Intelligence Specialist' to find the latest versions of its containers. The input for this delegation must be ONLY the content of the specific application object.
-4.  Once all delegation sub-tasks are complete and you have received the updated JSON snippets from the specialist, merge the results back into the original, full report.
-5.  Return the final, complete, fully-updated JSON object.
-
-You MUST delegate the work for each component individually. You are not to perform any search or data retrieval yourself.""",
-        expected_output="""The complete, updated JSON report with the `latest_version` and `latest_version_info_url` fields populated for all components.""",
-        agent=manager_agent,
-    )
-    
-    # This is the task for the worker agent, which will be delegated by the manager.
-    coworker_task = Task(
-        description="""You receive an input JSON object representing a single Kubernetes cluster item (either the control plane, 
-or a single application/container). Your task is to inspect ONLY this item and determine the latest available stable version and 
-its official release information URL.
+    # This is a general task for the coworker. It will be delegated by the manager.
+    coworker_task_template = Task(
+        description="""You receive a request from your manager, the 'Software Release Version Manager', to perform a specific lookup. Your task is to inspect ONLY the data provided to you and determine the latest available stable version and its official release information URL.
 For the control plane:
   - Search ONLY the official Kubernetes releases page or site for the latest stable version.
   - Update 'latest_version' and 'latest_version_info_url' accordingly.
@@ -126,10 +105,36 @@ Your ONLY responsibility is to update the 'latest_version' and 'latest_version_i
 All other fields must be preserved as in the input.""",
         agent=coworker_agent,
     )
-    
+
+    # The manager's task is now a strict, multi-step process with an explicit format example.
+    manager_task = Task(
+        description="""You have been provided with a JSON string representing a Kubernetes cluster scan report: {k8s_data}.
+Your primary task is to orchestrate the discovery of the latest stable versions for each item in the report.
+
+**Delegation Process - Follow these steps PRECISELY:**
+1.  **First, parse the entire JSON string `{k8s_data}` into a structured object.**
+2.  **Delegate the Control Plane lookup:** Create a **single** delegation task for the `kubernetes_control_plane` object. This task must be sent to your coworker. The value for the `coworker` key must be **'software release intelligence specialist'** (all lowercase). The input to this tool must be a single, flat JSON object. It is absolutely critical that the input is NOT a list of objects.
+    * **The input must look EXACTLY like this:**
+        `{ "task": "...", "context": "...", "coworker": "software release intelligence specialist" }`
+    * The `context` key must contain the JSON object for the `kubernetes_control_plane`.
+
+3.  **Delegate EACH App lookup Individually:** After delegating the control plane, you will iterate through the `apps` array. For EACH app object you find in the array, you will perform a **new, separate delegation step**.
+    * For each delegation, you must again create a **single** flat JSON object as the tool input, using the same format as above.
+    * The `context` key must contain the JSON object for the specific app you are delegating.
+    * The `coworker` key must be **'software release intelligence specialist'** (all lowercase).
+    * **Do NOT** bundle multiple delegations into a single list.
+
+4.  **Assemble the Final Report:** Once you have received the output for **every single** delegation (the control plane and all apps), you must merge the updated JSON snippets back into a single, complete JSON report. Your final answer must be this complete report.
+
+You MUST delegate each lookup as a separate, single-item task. Your output must be a single, complete JSON object.
+""",
+        expected_output="""The complete, updated JSON report with the `latest_version` and `latest_version_info_url` fields populated for all components.""",
+        agent=manager_agent,
+    )
+
     return Crew(
         agents=[coworker_agent],
-        tasks=[manager_task, coworker_task],
+        tasks=[manager_task],
         process=Process.hierarchical,
         manager_agent=manager_agent,
         verbose=True,
