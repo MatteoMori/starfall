@@ -63,8 +63,8 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
         process=Process.sequential,
         verbose=True,
     )
-
-# --- VersionDiscovery Crew (Final Hierarchical Attempt) ---
+    
+# --- VersionDiscovery Crew (Final, Corrected Hierarchical Crew) ---
 def create_version_discovery_crew() -> Crew:
     """
     Creates a hierarchical crew for discovering the latest versions.
@@ -87,25 +87,6 @@ def create_version_discovery_crew() -> Crew:
         verbose=True,
     )
 
-#     # This is a general task for the coworker. It will be delegated by the manager.
-#     coworker_task_template = Task(
-#         description="""You receive a request from your manager, the 'Software Release Version Manager', to perform a specific lookup. Your task is to inspect ONLY the data provided to you and determine the latest available stable version and its official release information URL.
-# For the control plane:
-#   - Search ONLY the official Kubernetes releases page or site for the latest stable version.
-#   - Update 'latest_version' and 'latest_version_info_url' accordingly.
-# For applications/containers:
-#   - For the given container, search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software.
-#   - Update the 'latest_version' and 'latest_version_info_url' fields in the input JSON accordingly.
-# Do NOT use DockerHub, third-party registries, or unofficial sources.
-# Do NOT perform upgrade analysis or summarize release notes.
-# Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.""",
-#         expected_output="""The output must match the input JSON structure, with the addition or update of:
-#   - latest_version: <Latest available stable release version string>
-#   - latest_version_info_url: <URL to official release notes or version listing>
-# All other fields must be preserved as in the input.""",
-#         agent=coworker_agent,
-#     )
-
     # The manager's task is now a strict, multi-step process with an explicit format example.
     manager_task = Task(
         description="""You have been provided with a JSON string representing a Kubernetes cluster scan report: {k8s_data}.
@@ -113,13 +94,19 @@ Your primary task is to orchestrate the discovery of the latest stable versions 
 
 **Delegation Process - Follow these steps PRECISELY:**
 1.  **First, parse the entire JSON string `{k8s_data}` into a structured object.**
-2.  **Delegate the Control Plane lookup:** Create a **single** delegation task for the `kubernetes_control_plane` object. This task must be sent to your coworker. The value for the `coworker` key must be **'software release intelligence specialist'** (all lowercase). The input to this tool must be a single, flat JSON object. It is absolutely critical that the input is NOT a list of objects.
+2.  **Delegate the Control Plane lookup:** Create a **single** delegation task for the `kubernetes_control_plane` object. This task must be sent to your coworker. The value for the `coworker` key must be **'software release intelligence specialist'** (all lowercase).
+    * **Step 2.1:** The parsed JSON object for the `kubernetes_control_plane` must be serialized back into a JSON string before being passed to the tool's `context` argument.
+    * The 'task' for the coworker must contain the following instructions: 'Search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software. **Do NOT use DockerHub, third-party registries, or unofficial sources. Do NOT perform upgrade analysis or summarize release notes. ALWAYS return back the same JSON object you are given. Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.**'
+    * The `expected_output` for the coworker's task is: 'The output must match the input JSON structure, with the addition or update of: - latest_version: <Latest available stable release version string> - latest_version_info_url: <URL to official release notes or version listing> All other fields must be preserved as in the input.'
+    * The input to this tool must be a single, flat JSON object. It is absolutely critical that the input is NOT a list of objects.
     * **The input must look EXACTLY like this:**
         `{ "task": "...", "context": "...", "coworker": "software release intelligence specialist" }`
     * The `context` key must contain the JSON object for the `kubernetes_control_plane`.
 
 3.  **Delegate EACH App lookup Individually:** After delegating the control plane, you will iterate through the `apps` array. For EACH app object you find in the array, you will perform a **new, separate delegation step**.
     * For each delegation, you must again create a **single** flat JSON object as the tool input, using the same format as above.
+    * The 'task' for the coworker must contain the following instructions: 'Search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software. **Do NOT use DockerHub, third-party registries, or unofficial sources. Do NOT perform upgrade analysis or summarize release notes. ALWAYS return back the same JSON object you are given. Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.**'
+    * The `expected_output` for the coworker's task is: 'The output must match the input JSON structure, with the addition or update of: - latest_version: <Latest available stable release version string> - latest_version_info_url: <URL to official release notes or version listing> All other fields must be preserved as in the input.'
     * The `context` key must contain the JSON object for the specific app you are delegating.
     * The `coworker` key must be **'software release intelligence specialist'** (all lowercase).
     * **Do NOT** bundle multiple delegations into a single list.
@@ -128,7 +115,10 @@ Your primary task is to orchestrate the discovery of the latest stable versions 
 
 You MUST delegate each lookup as a separate, single-item task. Your output must be a single, complete JSON object.
 """,
-        expected_output="""The complete, updated JSON report with the `latest_version` and `latest_version_info_url` fields populated for all components.""",
+        expected_output="""The output must match the input JSON structure, with the addition or update of:
+  - latest_version: <Latest available stable release version string>
+  - latest_version_info_url: <URL to official release notes or version listing>
+All other fields must be preserved as in the input.""",
     )
 
     return Crew(
