@@ -87,24 +87,24 @@ def create_version_discovery_crew() -> Crew:
         verbose=True,
     )
 
-    # This is a general task for the coworker. It will be delegated by the manager.
-    coworker_task_template = Task(
-        description="""You receive a request from your manager, the 'Software Release Version Manager', to perform a specific lookup. Your task is to inspect ONLY the data provided to you and determine the latest available stable version and its official release information URL.
-For the control plane:
-  - Search ONLY the official Kubernetes releases page or site for the latest stable version.
-  - Update 'latest_version' and 'latest_version_info_url' accordingly.
-For applications/containers:
-  - For the given container, search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software.
-  - Update the 'latest_version' and 'latest_version_info_url' fields in the input JSON accordingly.
-Do NOT use DockerHub, third-party registries, or unofficial sources.
-Do NOT perform upgrade analysis or summarize release notes.
-Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.""",
-        expected_output="""The output must match the input JSON structure, with the addition or update of:
-  - latest_version: <Latest available stable release version string>
-  - latest_version_info_url: <URL to official release notes or version listing>
-All other fields must be preserved as in the input.""",
-        agent=coworker_agent,
-    )
+#     # This is a general task for the coworker. It will be delegated by the manager.
+#     coworker_task_template = Task(
+#         description="""You receive a request from your manager, the 'Software Release Version Manager', to perform a specific lookup. Your task is to inspect ONLY the data provided to you and determine the latest available stable version and its official release information URL.
+# For the control plane:
+#   - Search ONLY the official Kubernetes releases page or site for the latest stable version.
+#   - Update 'latest_version' and 'latest_version_info_url' accordingly.
+# For applications/containers:
+#   - For the given container, search ONLY the official vendor website or official GitHub repository releases page for the latest stable (non-pre-release, non-RC) version of the underlying software.
+#   - Update the 'latest_version' and 'latest_version_info_url' fields in the input JSON accordingly.
+# Do NOT use DockerHub, third-party registries, or unofficial sources.
+# Do NOT perform upgrade analysis or summarize release notes.
+# Your ONLY responsibility is to update the 'latest_version' and 'latest_version_info_url' fields for this item, based on official sources.""",
+#         expected_output="""The output must match the input JSON structure, with the addition or update of:
+#   - latest_version: <Latest available stable release version string>
+#   - latest_version_info_url: <URL to official release notes or version listing>
+# All other fields must be preserved as in the input.""",
+#         agent=coworker_agent,
+#     )
 
     # The manager's task is now a strict, multi-step process with an explicit format example.
     manager_task = Task(
@@ -129,7 +129,6 @@ Your primary task is to orchestrate the discovery of the latest stable versions 
 You MUST delegate each lookup as a separate, single-item task. Your output must be a single, complete JSON object.
 """,
         expected_output="""The complete, updated JSON report with the `latest_version` and `latest_version_info_url` fields populated for all components.""",
-        agent=manager_agent,
     )
 
     return Crew(
