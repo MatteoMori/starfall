@@ -5,8 +5,6 @@ import json
 
 # Import the functions that create the crews
 from starfall.crew import create_k8s_scan_crew, create_version_discovery_crew
-
-# This is a good practice to handle a common warning related to a specific library.
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 def run():
@@ -26,7 +24,7 @@ def run():
         # Access the raw string output from the CrewOutput object
         k8s_json_output = k8s_scan_result.raw
         
-        # We need to ensure the output is not empty before proceeding.
+        # Ensure the output is not empty before proceeding.
         if not k8s_json_output:
             raise Exception("K8sScan crew returned no output. Aborting.")
 
@@ -40,16 +38,11 @@ def run():
         # Call the function to create the VersionDiscovery crew
         version_discovery_crew = create_version_discovery_crew()
         
-        # This is the key step: passing the output of the first crew as a named input
+        # Pass the output of the first crew as a named input
         # to the second crew's kickoff method. The manager agent's task is
         # designed to handle this 'k8s_data' input.
         final_report = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
         
-        # print("\n\n########################")
-        # print("## Final Combined Report ##")
-        # print("########################\n")
-        # print(final_report)
-
     except Exception as e:
         raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
 

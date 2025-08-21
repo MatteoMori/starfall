@@ -67,8 +67,8 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
         process=Process.sequential,
         verbose=True,
     )
-    
-# --- VersionDiscovery Crew (Final, Corrected Hierarchical Crew) ---
+
+# --- VersionDiscovery Crew ---
 def create_version_discovery_crew() -> Crew:
     """
     Creates a hierarchical crew for discovering the latest versions.
@@ -91,7 +91,7 @@ def create_version_discovery_crew() -> Crew:
         verbose=True,
     )
 
-    # The manager's task is now a strict, multi-step process with an explicit format example.
+    # The manager's task is a strict, multi-step process with an explicit format example.
     manager_task = Task(
         description="""You have been provided with a JSON string representing a Kubernetes cluster scan report: {k8s_data}.
 Your primary task is to orchestrate the discovery of the latest stable versions for each item in the report.
