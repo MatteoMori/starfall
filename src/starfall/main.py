@@ -45,10 +45,10 @@ def run():
         # designed to handle this 'k8s_data' input.
         final_report = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
         
-        print("\n\n########################")
-        print("## Final Combined Report ##")
-        print("########################\n")
-        print(final_report)
+        # print("\n\n########################")
+        # print("## Final Combined Report ##")
+        # print("########################\n")
+        # print(final_report)
 
     except Exception as e:
         raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
