@@ -133,3 +133,122 @@ All other fields must be preserved as in the input.""",
         manager_agent=manager_agent,
         verbose=True,
     )
+
+
+# --- Sequential ReleaseNotesDiscovery Crew ---
+def create_sequential_release_notes_discovery_crew() -> Crew:
+    """
+    Creates a sequential crew for Identifying release notes from the web and build a report.
+    """
+    release_hunter = Agent(
+        role='Software Release Feature Investigator',
+        goal="""Thoroughly analyze the release notes and documentation for a specified Tool or Platform version, 
+        identifying and extracting the most valuable new features and enhancements. 
+        Clearly determine the intended audience and impact of each feature, distinguishing between developer/consumer-facing improvements, platform engineer/maintainer 
+        enhancements, and strategic changes relevant to senior stakeholders or heads of engineering.""",
+        
+        backstory="""You are a highly skilled analyst specializing in software release intelligence. Your expertise lies in 
+        interpreting official release notes, changelogs, and product documentation to surface the most important advancements 
+        in new versions of cloud-native tools and platforms. You understand the technical and business context of 
+        infrastructure upgrades, and are adept at assessing which features will benefit developers and application teams, 
+        which will improve platform operations and reliability for maintainers, and which will drive strategic outcomes 
+        for senior leadership. Your output is a concise, audience-segmented summary that enables teams to plan upgrades, 
+        communicate business value, and reduce risk.""",
+        tools=[brave_search_tool, scrape_website_tool],
+        verbose=True,
+    )
+
+
+    risk_expert = Agent(
+        role='Software Upgrade Risk and Breaking Change Analyst',
+        goal="""Investigate and summarize all risks, breaking changes, and migration challenges that may arise when upgrading a Tool or Platform 
+        from its current version to the latest available version. Clearly identify which risks and changes impact developers/consumers, 
+        platform engineers/maintainers, or senior stakeholders, enabling comprehensive upgrade planning and communication.""",
+        backstory="""You are an expert in software migration analysis and risk assessment. Your specialty is understanding upgrade paths for cloud-native tools 
+        and platforms, with a focus on uncovering breaking changes, deprecated features, and unexpected behaviors that may affect system reliability, 
+        developer experience, and strategic business outcomes. You scan official release notes, changelogs, migration guides, and community reports 
+        to extract and categorize all risks and breaking changes, providing actionable insights for each audience: developers/consumers, platform engineers/maintainers, 
+        and senior leadership. Your output is a structured, audience-segmented risk report that ensures every stakeholder is informed and prepared for a successful upgrade.""",
+        tools=[brave_search_tool, scrape_website_tool],
+        verbose=True,
+    )
+
+
+
+    new_features_task = Task(
+        description="""
+    You are provided with a JSON object describing a specific Tool or Application in a Kubernetes environment.
+    The tool's information are:  {tool_info}
+    The tool in question is: {tool_name}
+
+    If the tool is Kubernetes itself, the input is in the below format:
+    {'current_version': <string>, 'latest_version': <string>, 'latest_version_info_url': <url>, 'name': <string>, 'scanned_at': <ISO8601 UTC timestamp>}
+    If it is an application, the input is in the below format:
+    {'name': <string>, 'namespace': <string>, 'deployment': <string>, 'containers': [{'name': <string>, 'image': <string>, 'current_version': <string>, 'latest_version': <string>, 'latest_version_info_url': <url>}], 'labels': {...}}
+
+    Your mission is to actively browse the internet, using ONLY official release notes, changelogs, or trusted vendor documentation, and identify the most valuable new features introduced in the 'latest_version' of {tool_name}.
+
+    DO NOT use unofficial sources, not trustworthy blogs, forums, or DockerHub. Do not rely only on dry Changelogs as it will be hard to extrapolate useful information.
+
+    If {tool_name} is Kubernetes, you can trust the content of https://kubernetes.io/blog
+    If {tool_name} is Cilium, you can trust the content of the Isovalent's blog.
+
+    Your input provides you with a starting point URL to browse (<latest_version_info_url>) but you DO NOT limit yourself to just that URL. You have to explore other official sources as needed.
+
+    **Process - Follow These Steps Exactly:**
+    1.  **Search for Release Highlights:** Go online and conduct a broad search using the tool name and version combined with terms like "new features," "release highlights," or "what's new." For example: "Kubernetes v1.33 new features" or "Cilium v1.33 release highlights."
+    2.  **Select the Best Source:** Carefully review the search results and select the single most promising official URL (e.g., an official blog post or announcement) to scrape for detailed information.
+    3.  **Synthesize Findings:** Systematically review the content of the selected URL to find all relevant new features.
+    4.  **Extract and Categorize:** From the synthesized information, carefully extract the most important new features. For each feature, clearly determine who benefits most:
+        - If the feature benefits developers/consumers, use the audience label: '👨‍💻 Devs'
+        - If the feature benefits platform engineers/owners, use the audience label: '🛠️ Ops'
+        - If a feature benefits both, use: '👨‍💻 Devs + 🛠️ Ops'
+    4.  **Explain the 'Why':** For each feature, concisely explain WHY it matters for that audience (value, use case, impact).
+    5.  **Organize your Output:** Format your answer as a Markdown table.
+
+    ### 🌟 Highlights
+    | Feature | Audience | Why It Matters |
+    |---------|----------|----------------|
+    <#highlights>
+    | **<feature_name>** <feature_icon> | <audience> | <impact> |
+    </highlights>
+
+    - 'feature_icon' is an emoji that best represents the feature (e.g., 🚀, 🔒, ⚡️, 📅).
+    - Use one row per feature.
+    - Only include features newly introduced in the 'latest_version'.
+
+    Your final answer MUST be a valid markdown table. Never include commentary outside the Markdown output.
+
+    **Example Output Table:**
+    ### 🌟 Highlights
+    | Feature | Audience | Why It Matters |
+    |---------|----------|----------------|
+    | **Sidecar Containers GA** 🚀 | 👨‍💻 Devs + 🛠️ Ops | Developers can finally ship sidecars without ugly hacks → Operators gain predictable lifecycle mgmt. |
+    | **CronJobs reach GA** 📅 | 🛠️ Ops | Reliable, production-ready scheduling → less pager noise for operators. |
+    | **NetworkPolicy status field** 🔒 | 🛠️ Ops | Visibility on applied/failed policies → faster debugging & compliance. |
+    | **Pod replacement speed improvements** ⚡ | 👨‍💻 Devs | Faster rollouts = happier developers waiting less on CI/CD pipelines. |
+    """,
+        expected_output="""
+    A Markdown-formatted table listing the most important new features found in the official release notes for the specified tool or application version.
+
+    The table must have these columns:
+    | Feature | Audience | Why It Matters |
+
+    Each row should contain:
+    - Feature name and an emoji icon
+    - Audience ('👨‍💻 Devs', '🛠️ Ops', or '👨‍💻 Devs + 🛠️ Ops')
+    - Impact statement
+
+    If no features are found, state "No major new features in this release."
+    """,
+        #output_file='outputs/new_features_report.md',
+        agent=release_hunter,
+        markdown=True,  # Enable automatic markdown formatting
+    )
+
+    return Crew(
+        agents=[release_hunter],
+        tasks=[new_features_task],
+        process=Process.sequential,
+        verbose=True,
+    )
