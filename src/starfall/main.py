@@ -6,14 +6,17 @@ import os
 from pathlib import Path
 
 # Import the functions that create the crews
-from starfall.crew import create_k8s_scan_crew, create_version_discovery_crew, create_sequential_release_notes_discovery_crew
+from starfall.crew import create_k8s_scan_crew, create_version_discovery_crew, create_sequential_report_generator_crew
+from starfall.utils import assign_task_output_file_name
+
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 def run():
     """
-    Runs the two-stage crew process:
+    Runs the 3-stage crew process:
     1. The K8sScan crew to generate the initial cluster report.
     2. The VersionDiscovery crew to enrich the report with latest version data.
+    3. The ReleaseNotesDiscovery crew to gather relevant release notes.
     """
     
     # # --- Stage 1: K8sScan Crew ---
@@ -67,36 +70,73 @@ def run():
         print("Using Sequential Process Crew for Release info discovery")
 
         try:
-            # Simplified: load template report relative to this file's directory.
+            # ====================================================================== 
+            # Simplified flow for testing: load template report relative to this file's directory.
+
             template_path = Path(__file__).resolve().parent / 'templates' / 'final_k8s_scanner_report.json'
             with template_path.open('r') as f:
                 final_scanned_obj = json.load(f)
             print(f"Loaded report from: {template_path}")
-            #print(final_scanned_obj)
+            # ======================================================================
+
 
             # TODO - Pass value from previous step
             #final_scanned_obj = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
 
-            # Split the received scanned object and loop for each element. The Sequential crew will address one block at the time
+            # Split the received object and loop through each element. The Sequential crew will address one block at the time
             #   -> Focus on the k8s control plane
             if final_scanned_obj['kubernetes_control_plane']:
-                print(final_scanned_obj['kubernetes_control_plane'])
-                # Call the function to create the Crew
-                sequential_release_notes_discovery_crew = create_sequential_release_notes_discovery_crew()
+                #print(final_scanned_obj['kubernetes_control_plane'])
 
+                # ===========================================
+                # Create the crew, configure it and start it
+                # ===========================================
+                sequential_report_generator_crew = create_sequential_report_generator_crew()
+
+    
+                truncated_version = ".".join(final_scanned_obj['kubernetes_control_plane']['latest_version'].split(".")[:2])
+
+                # Assign dynamic output_file for the task "release_notes_task"
+                assign_task_output_file_name(
+                    sequential_report_generator_crew,
+                    task_name="release_notes_task",
+                    tool_name="kubernetes",
+                    tool_version=truncated_version,
+                )
+            
                 # Start the crew
-                k8s_report = sequential_release_notes_discovery_crew.kickoff(inputs={
+                k8s_report = sequential_report_generator_crew.kickoff(inputs={
                     'tool_name': "kubernetes",
-                    'tool_info': final_scanned_obj['kubernetes_control_plane']
+                    'tool_latest_version': truncated_version
                 })
-                print(k8s_report)
+                #print(k8s_report)
 
 
             #   -> Focus on each identified application
             if final_scanned_obj['apps']:
                 for app in final_scanned_obj['apps']:
-                    print(app)
-                    print("--")
+                    for container in app['containers']:
+                        # ===========================================
+                        # Create the crew, configure it and start it
+                        # ===========================================
+                        sequential_report_generator_crew = create_sequential_report_generator_crew()
+                        truncated_version = ".".join(container['latest_version'].split(".")[:2])
+                        
+                        # Assign dynamic output_file for the task "release_notes_task"
+                        assign_task_output_file_name(
+                            sequential_report_generator_crew,
+                            task_name="release_notes_task",
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_version=truncated_version,
+                        )
+                    
+                        # Start the crew
+                        app_report = sequential_report_generator_crew.kickoff(inputs={
+                            'tool_name': container['name'],
+                            'tool_latest_version': truncated_version
+                        })
+
+
 
             # Call the function to create the crew
             #version_discovery_crew = create_version_discovery_crew()
