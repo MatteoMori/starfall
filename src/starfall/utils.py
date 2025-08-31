@@ -5,7 +5,7 @@ def slugify(text: str) -> str:
     """Sanitize text for filenames: replace non-alphanumerics with hyphens."""
     return re.sub(r'[^A-Za-z0-9]+', '-', text.strip()).strip('-').lower()
 
-def assign_task_output_file_name(crew, task_name: str, tool_name: str, tool_version: str):
+def assign_task_output_file_name(crew, scope: str, task_name: str, tool_name: str, tool_version: str):
     """
     Find a task by name in the crew and assign a dynamic output_file name.
 
@@ -26,6 +26,6 @@ def assign_task_output_file_name(crew, task_name: str, tool_name: str, tool_vers
         raise RuntimeError(f"Task named '{task_name}' not found in crew.tasks")
 
     Path("outputs").mkdir(exist_ok=True)
-    filename = f"outputs/{slugify(tool_name)}-{tool_version}-new_features_report.md"
+    filename = f"outputs/{slugify(tool_name)}-{tool_version}-{scope}-report.md"
     task.output_file = filename
     return

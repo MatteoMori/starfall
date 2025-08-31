@@ -144,6 +144,9 @@ def create_sequential_report_generator_crew() -> Crew:
     Creates a sequential crew for discovering release notes and producing a Markdown report.
     """
 
+    # ===========================================
+    # Define Agents
+    # ===========================================
     release_analyst = Agent(
         role="Software Release Analyst",
         goal="""Identify and summarize the most important new features, fixes, and improvements 
@@ -172,6 +175,39 @@ def create_sequential_report_generator_crew() -> Crew:
         verbose=True,
     )
 
+
+    risk_expert = Agent(
+        name="Risk Expert",
+        role="Senior Platform Engineer Specialized in Risk Analysis",
+        goal="""
+        Identify potential risks, breaking changes, and critical deprecations in new software releases
+        and provide a clean, concise risk assessment.
+        """,
+        backstory="""
+        You are the 'Risk Expert,' a highly experienced and detail-oriented platform engineer.
+        Your core task is to meticulously analyze software release notes for cloud-native tools,
+        especially those running on Kubernetes.
+
+        Your process is as follows:
+        1.  **Search & Scrape**: Use the BraveSearch tool with `search_query` set to a well-phrased query to find and analyze the most authoritative release notes.
+        2.  **Analyze**: Carefully identify all breaking changes, critical deprecations, and potential
+            risks.
+        3.  **Document**: For each risk, classify it with a severity level (low, medium, high),
+            and a clear, short description of its impact.
+
+        Your final output is always a clean, structured risk summary, free of any commentary,
+        prose, or conversational text.
+        """,
+        tools=[brave_search_tool, scrape_website_tool],
+        verbose=True,
+    )
+
+
+
+
+    # ===========================================
+    # Define Tasks
+    # ===========================================
     release_notes_task = Task(
         name="release_notes_task",
         description="""
@@ -206,6 +242,7 @@ def create_sequential_report_generator_crew() -> Crew:
         |---------|----------|----------------|
         | **<feature_name>** <emoji> | <audience> | <impact> |
 
+        Do NOT include commentary, prose, or code fences like ```.
         If no features are found, output one row stating:
         | No major new features in this release. | - | - |
         """,
@@ -222,16 +259,101 @@ def create_sequential_report_generator_crew() -> Crew:
         - Always include an emoji with each feature.
         - If no features are found, include a single row:
           | No major new features in this release. | - | - |
-        - Do NOT include commentary, prose, or code fences.
+        - Do NOT include commentary, prose, or code fences like ```.
         """,
-        #output_file=f"outputs/{tool_name}-new_features_report.md",
         agent=release_analyst,
         markdown=True,
     )
 
+
+    # upgrade_risks_task = Task(
+    #     name="upgrade_risks_task",
+    #     description="""
+    #     You are provided with metadata about a tool running in a Kubernetes environment:
+    #     Name: {tool_name} - Target version: {tool_latest_version} - Current version: {tool_current_version}
+
+
+    #     1. **Search**:
+    #        - Use the BraveSearch tool to find official release notes for {tool_name} {tool_latest_version}.
+    #        - Query example: "{tool_name} v{tool_latest_version} release notes site:officialsite.com"
+    #        - if you receive a "429 Client Error: Too Many Requests" error, sleep 1 sec and try again.
+
+    #     2. **Scrape & Analyze**:
+    #        - Scrape the most authoritative release notes page.
+    #        - Extract only meaningful fixes, breaking changes and deprecations. 
+    #        - Pay special attention to any changes that might impact the upgrade process, keep an eye on potential compatibility issues.
+    #        - Document any known issues or migration steps required for the upgrade.
+
+
+    #     4. **Classify & Explain**:
+    #        - For each risk, write a short summary and assign a severity level (low, medium, high).
+    #        - Include an emoji icon to represent the risk (🚀, 🔒, ⚡️, 📅).
+
+    #     5. **Output**:
+    #        Format strictly as a Markdown table like the below example:
+
+    #         ### ⚠️ Breaking Changes & Risks  
+    #         | Change | Severity | Impact |
+    #         |--------|----------|--------|
+    #         | Deprecation of **PodSecurityPolicy APIs** (final removal). | High | Existing policies may break. |
+    #         | Some **beta APIs disabled by default** → risk of pipelines breaking. | Medium | Pipelines relying on beta APIs may fail. |
+
+    #     Do NOT include commentary, prose, or code fences like ```.
+    #     If no risks are found, output one row stating:
+    #     | No major risks are identified. | - | - |
+    #     """,
+    #     expected_output="""
+    #     A Markdown table following the below template:
+
+    #     ### ⚠️ Breaking Changes & Risks  
+    #     | Change | Severity | Impact |
+    #     |--------|----------|--------|
+    #     | **< risk_name >** <emoji> | <severity level> | <impact> |
+
+    #     Rules for output:
+    #     - **MUST** be a single Markdown table, with no text before or after it.
+    #     - **ABSOLUTELY NO** commentary, prose, or code fences (e.g., ```).
+    #     - Title **MUST** be exactly "### ⚠️ Breaking Changes & Risks".
+    #     - Headers **MUST** be exactly "Change", "Severity", and "Impact".
+    #     - Each change **MUST** include an emoji (e.g., 🚀, 🔒, ⚡️, 📅) and be bolded.
+    #     - If no risks are found, the table **MUST** contain only one single row:
+    #     | No major risks are identified. | - | - |
+    #     """,
+    #     agent=risk_expert,
+    #     markdown=True,
+    # )
+    upgrade_risks_task = Task(
+        name="upgrade_risks_task",
+        description="""
+        Analyze the upgrade from version {tool_current_version} to {tool_latest_version} for {tool_name} and
+        document all breaking changes and risks.
+        """,
+        expected_output="""
+        A strict Markdown table of breaking changes and risks.
+        
+        ### ⚠️ Breaking Changes & Risks  
+        | Change | Severity | Impact |
+        |---|---|---|
+        | **< risk_name >** <emoji> | <low|medium|high> | <impact_description> |
+
+        Rules for output:
+        - **MUST** be a single Markdown table, with no text before or after it.
+        - **ABSOLUTELY NO** commentary, prose, or code fences (e.g., ```).
+        - Title **MUST** be exactly "### ⚠️ Breaking Changes & Risks".
+        - Headers **MUST** be exactly "Change", "Severity", and "Impact".
+        - Each change **MUST** include an emoji (e.g., 🚀, 🔒, ⚡️, 📅) and be bolded.
+        - If no risks are found, the table **MUST** contain only one single row:
+        | No major risks are identified. | - | - |
+        """,
+        agent=risk_expert,
+        markdown=True,
+        verbose=True,
+    )
+
+
     return Crew(
-        agents=[release_analyst],
-        tasks=[release_notes_task],
+        agents=[release_analyst, risk_expert],
+        tasks=[release_notes_task, upgrade_risks_task],
         process=Process.sequential,
         verbose=True,
     )

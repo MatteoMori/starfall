@@ -84,7 +84,7 @@ def run():
             #final_scanned_obj = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
 
             # Split the received object and loop through each element. The Sequential crew will address one block at the time
-            #   -> Focus on the k8s control plane
+            # -> Generate partial report for Kubernetes itself
             if final_scanned_obj['kubernetes_control_plane']:
                 #print(final_scanned_obj['kubernetes_control_plane'])
 
@@ -99,7 +99,16 @@ def run():
                 # Assign dynamic output_file for the task "release_notes_task"
                 assign_task_output_file_name(
                     sequential_report_generator_crew,
+                    scope="features",
                     task_name="release_notes_task",
+                    tool_name="kubernetes",
+                    tool_version=truncated_version,
+                )
+
+                assign_task_output_file_name(
+                    sequential_report_generator_crew,
+                    scope="risks",
+                    task_name="upgrade_risks_task",
                     tool_name="kubernetes",
                     tool_version=truncated_version,
                 )
@@ -107,12 +116,13 @@ def run():
                 # Start the crew
                 k8s_report = sequential_report_generator_crew.kickoff(inputs={
                     'tool_name': "kubernetes",
-                    'tool_latest_version': truncated_version
+                    'tool_latest_version': truncated_version,
+                    'tool_current_version': final_scanned_obj['kubernetes_control_plane']['current_version']
                 })
                 #print(k8s_report)
 
 
-            #   -> Focus on each identified application
+            # -> Generate partial report for each identified application
             if final_scanned_obj['apps']:
                 for app in final_scanned_obj['apps']:
                     for container in app['containers']:
@@ -125,7 +135,15 @@ def run():
                         # Assign dynamic output_file for the task "release_notes_task"
                         assign_task_output_file_name(
                             sequential_report_generator_crew,
+                            scope="features",
                             task_name="release_notes_task",
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_version=truncated_version,
+                        )
+                        assign_task_output_file_name(
+                            sequential_report_generator_crew,
+                            scope="risks",
+                            task_name="upgrade_risks_task",
                             tool_name=app["name"]+"-"+container['name'],
                             tool_version=truncated_version,
                         )
@@ -133,7 +151,8 @@ def run():
                         # Start the crew
                         app_report = sequential_report_generator_crew.kickoff(inputs={
                             'tool_name': container['name'],
-                            'tool_latest_version': truncated_version
+                            'tool_latest_version': truncated_version,
+                            'tool_current_version': container['current_version']
                         })
 
 
