@@ -198,6 +198,28 @@ def create_sequential_report_generator_crew() -> Crew:
         verbose=True,
     )
 
+    release_director = Agent(
+        role="Software Release Director",
+        goal="""
+        Synthesize the feature highlights and risk assessments from your team into a cohesive,
+        actionable recommendation for tool upgrades.
+        """,
+        backstory="""
+        You are `release_director`, the main responsible for drafting final reports on tool upgrades.
+        Your job is to receive structured reports from the `release_analyst` and `risk_expert`
+        and use their findings to formulate a clear, high-level recommendation for management,
+        developers, and operators. You must weigh the benefits (new features) against the risks
+        (breaking changes) to provide a single, definitive action plan.
+
+        Your recommendations should be concise and business-oriented, focusing on the "why"
+        behind the decision and the specific benefits or risks for different stakeholders.
+        You must always produce one of the following recommendations:
+        - **Upgrade is strongly advised:** When there are significant new features with low to no risks.
+        - **Upgrade with caution:** When there are notable features but also identified risks that require planning.
+        - **Hold upgrade:** When the risks outweigh the benefits or there are no significant new features.
+        """,
+        verbose=True,
+    )
 
 
 
@@ -291,9 +313,50 @@ def create_sequential_report_generator_crew() -> Crew:
     )
 
 
+    final_report_task = Task(
+        name="final_report_task",
+        description="""
+        Based on the input received from the previous tasks, generate the final
+        recommendation report as a single Markdown string.
+
+        1. **Analyze Input**:
+        - Review the features provided by the `release_analyst`.
+        - Review the risks provided by the `risk_expert`.
+
+        2. **Synthesize and Decide**:
+        - Weigh the importance of new features against the severity of identified risks.
+        - If there are significant features and low/no risks, generate a "strongly advised" recommendation.
+        - If there are significant features but also medium/high risks, generate a "with caution" recommendation.
+        - If risks outweigh benefits or there are no major features, generate a "hold upgrade" recommendation.
+
+        3. **Format Output**:
+        - The output MUST be a single, structured markdown block.
+        - The heading MUST be `### ✅ Recommendation`.
+        - The first line MUST be one of the exact phrases: **Upgrade is strongly advised.**, **Upgrade with caution.**, or **Hold upgrade.**
+        - Use a bulleted list to summarize key takeaways for each audience: Developers, Operators, and Executives.
+        - Do NOT include any commentary, prose, or code fences outside of the final markdown block.
+        
+        Example:
+        ### ✅ Recommendation  
+        **Upgrade is strongly advised.**
+        - Developers → Huge productivity gains with Sidecars.  
+        - Operators → More stability & observability.  
+        - Executives → Faster delivery cycles with lower incident noise.  
+        """,
+        expected_output="""
+        Rules for output:
+        - **ABSOLUTELY NO** commentary, prose, or code fences (e.g., ```).
+        """,
+        agent=release_director,
+        markdown=True,
+        context=[upgrade_risks_task,release_notes_task],
+    )
+
+
+
     return Crew(
-        agents=[release_analyst, risk_expert],
-        tasks=[release_notes_task, upgrade_risks_task],
+        agents=[release_analyst, risk_expert, release_director],
+        tasks=[release_notes_task, upgrade_risks_task, final_report_task],
         process=Process.sequential,
         verbose=True,
     )

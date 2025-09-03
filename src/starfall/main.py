@@ -3,6 +3,7 @@ import sys
 import warnings
 import json
 import os
+import random
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
@@ -90,6 +91,7 @@ def run():
             repo_root = module_dir.parents[1]                         # .../starfall
             template_dir = module_dir / "templates"                   # templates alongside main.py
             tool_report_template = "final_report_tool.py.jinja"
+            emoji_pool = ["☸️", "🚀", "🌟", "🛠️", "⚙️", "📦", "🔧", "🧭", "🛰️", "🌐"]
 
             # Split the received object and loop through each element. The Sequential crew will address one block at the time
             # -> Generate partial report for Kubernetes itself
@@ -120,6 +122,14 @@ def run():
                     tool_name="kubernetes",
                     tool_version=truncated_version,
                 )
+
+                assign_task_output_file_name(
+                    sequential_report_generator_crew,
+                    scope="recommendations",
+                    task_name="final_report_task",
+                    tool_name="kubernetes",
+                    tool_version=truncated_version,
+                )
             
                 # Start the crew
                 k8s_report = sequential_report_generator_crew.kickoff(inputs={
@@ -134,12 +144,14 @@ def run():
                 outputs_dir = repo_root / "outputs"
                 features_md = outputs_dir / f"kubernetes-{truncated_version}-features-report.md"
                 risks_md = outputs_dir / f"kubernetes-{truncated_version}-risks-report.md"
+                recommendations_md = outputs_dir / f"kubernetes-{truncated_version}-recommendations-report.md"
 
 
 
                 # Load raw markdown
                 highlights_raw = features_md.read_text(encoding="utf-8")
                 risks_raw = risks_md.read_text(encoding="utf-8")
+                recommendations_raw = recommendations_md.read_text(encoding="utf-8")
 
                 env = Environment(
                     loader=FileSystemLoader(str(template_dir)),
@@ -155,46 +167,91 @@ def run():
                     tool_icon="☸️",
                     current_version=final_scanned_obj['kubernetes_control_plane']['current_version'],
                     latest_version=final_scanned_obj['kubernetes_control_plane']['latest_version'],
-                    highlights_table=highlights_raw,   # full file content dropped in
-                    breaking_changes=risks_raw,        # full file content dropped in
+                    highlights_table=highlights_raw,          # full file content dropped in
+                    breaking_changes=risks_raw,               # full file content dropped in
+                    final_recommendation=recommendations_raw, # full file content dropped in
                 )
 
                 with (repo_root / "outputs" / "kubernetes-upgrade-report.md").open("w", encoding="utf-8") as f:
                     f.write(rendered)
 
             # -> Generate partial report for each identified application
-            # if final_scanned_obj['apps']:
-            #     for app in final_scanned_obj['apps']:
-            #         for container in app['containers']:
-            #             # ===========================================
-            #             # Create the crew, configure it and start it
-            #             # ===========================================
-            #             sequential_report_generator_crew = create_sequential_report_generator_crew()
-            #             truncated_version = ".".join(container['latest_version'].split(".")[:2])
+            if final_scanned_obj['apps']:
+                for app in final_scanned_obj['apps']:
+                    for container in app['containers']:
+                        # ===========================================
+                        # Create the crew, configure it and start it
+                        # ===========================================
+                        sequential_report_generator_crew = create_sequential_report_generator_crew()
+                        truncated_version = ".".join(container['latest_version'].split(".")[:2])
                         
-            #             # Assign dynamic output_file for the task "release_notes_task"
-            #             assign_task_output_file_name(
-            #                 sequential_report_generator_crew,
-            #                 scope="features",
-            #                 task_name="release_notes_task",
-            #                 tool_name=app["name"]+"-"+container['name'],
-            #                 tool_version=truncated_version,
-            #             )
-            #             assign_task_output_file_name(
-            #                 sequential_report_generator_crew,
-            #                 scope="risks",
-            #                 task_name="upgrade_risks_task",
-            #                 tool_name=app["name"]+"-"+container['name'],
-            #                 tool_version=truncated_version,
-            #             )
+                        # Assign dynamic output_file for the task "release_notes_task"
+                        assign_task_output_file_name(
+                            sequential_report_generator_crew,
+                            scope="features",
+                            task_name="release_notes_task",
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_version=truncated_version,
+                        )
+                        assign_task_output_file_name(
+                            sequential_report_generator_crew,
+                            scope="risks",
+                            task_name="upgrade_risks_task",
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_version=truncated_version,
+                        )
                     
-            #             # Start the crew
-            #             app_report = sequential_report_generator_crew.kickoff(inputs={
-            #                 'tool_name': container['name'],
-            #                 'tool_latest_version': truncated_version,
-            #                 'tool_current_version': container['current_version']
-            #             })
+                        assign_task_output_file_name(
+                            sequential_report_generator_crew,
+                            scope="recommendations",
+                            task_name="final_report_task",
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_version=truncated_version,
+                        )
 
+                        # Start the crew
+                        app_report = sequential_report_generator_crew.kickoff(inputs={
+                            'tool_name': container['name'],
+                            'tool_latest_version': truncated_version,
+                            'tool_current_version': container['current_version']
+                        })
+
+                        # ===========================================================================
+                        # Generate the final report for each tool
+                        # ===========================================================================
+                        outputs_dir = repo_root / "outputs"
+                        features_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-features-report.md"
+                        risks_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-risks-report.md"
+                        recommendations_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-recommendations-report.md"
+
+
+
+                        # Load raw markdown
+                        highlights_raw = features_md.read_text(encoding="utf-8")
+                        risks_raw = risks_md.read_text(encoding="utf-8")
+                        recommendations_raw = recommendations_md.read_text(encoding="utf-8")
+
+                        env = Environment(
+                            loader=FileSystemLoader(str(template_dir)),
+                            autoescape=False,
+                            trim_blocks=True,
+                            lstrip_blocks=True,
+                        )
+
+                        template = env.get_template(tool_report_template)
+
+                        rendered = template.render(
+                            tool_name=app["name"]+"-"+container['name'],
+                            tool_icon=random.choice(emoji_pool),
+                            current_version=container['current_version'],
+                            latest_version=container['latest_version'],
+                            highlights_table=highlights_raw,          # full file content dropped in
+                            breaking_changes=risks_raw,               # full file content dropped in
+                            final_recommendation=recommendations_raw, # full file content dropped in
+                        )
+
+                        with (repo_root / "outputs" / f"{app["name"]+"-"+container['name']}-upgrade-report.md").open("w", encoding="utf-8") as f:
+                            f.write(rendered)
 
 
 
