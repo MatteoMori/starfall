@@ -21,37 +21,37 @@ def run():
     3. The ReleaseNotesDiscovery crew to gather relevant release notes.
     """
     
-    # # --- Stage 1: K8sScan Crew ---
-    # print("--- Running K8sScan crew (Stage 1) ---")
-    # try:
-    #     # Call the function to create the K8sScan crew
-    #     k8s_scan_crew = create_k8s_scan_crew()
-    #     k8s_scan_result = k8s_scan_crew.kickoff(inputs={})
+    # --- Stage 1: K8sScan Crew ---
+    print("--- Running K8sScan crew (Stage 1) ---")
+    try:
+        # Call the function to create the K8sScan crew
+        k8s_scan_crew = create_k8s_scan_crew()
+        k8s_scan_result = k8s_scan_crew.kickoff(inputs={})
         
-    #     # Access the raw string output from the CrewOutput object
-    #     k8s_json_output = k8s_scan_result.raw
+        # Access the raw string output from the CrewOutput object
+        k8s_json_output = k8s_scan_result.raw
         
-    #     # Ensure the output is not empty before proceeding.
-    #     if not k8s_json_output:
-    #         raise Exception("K8sScan crew returned no output. Aborting.")
+        # Ensure the output is not empty before proceeding.
+        if not k8s_json_output:
+            raise Exception("K8sScan crew returned no output. Aborting.")
 
-    # except Exception as e:
-    #     # Catch and re-raise a custom exception to make debugging easier.
-    #     raise Exception(f"An error occurred in K8sScan crew: {e}")
+    except Exception as e:
+        # Catch and re-raise a custom exception to make debugging easier.
+        raise Exception(f"An error occurred in K8sScan crew: {e}")
 
-    # # --- Stage 2: VersionDiscovery Crew ---
-    # print("\n--- Running VersionDiscovery crew (Stage 2) ---")
-    # try:
-    #     # Call the function to create the VersionDiscovery crew
-    #     version_discovery_crew = create_version_discovery_crew()
+    # --- Stage 2: VersionDiscovery Crew ---
+    print("\n--- Running VersionDiscovery crew (Stage 2) ---")
+    try:
+        # Call the function to create the VersionDiscovery crew
+        version_discovery_crew = create_version_discovery_crew()
         
-    #     # Pass the output of the first crew as a named input
-    #     # to the second crew's kickoff method. The manager agent's task is
-    #     # designed to handle this 'k8s_data' input.
-    #     final_report = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
+        # Pass the output of the first crew as a named input
+        # to the second crew's kickoff method. The manager agent's task is
+        # designed to handle this 'k8s_data' input.
+        final_report = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
         
-    # except Exception as e:
-    #     raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
+    except Exception as e:
+        raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
 
 
     # --- Stage 3: Release info discovery Crew ---
@@ -72,26 +72,26 @@ def run():
         print("Using Sequential Process Crew for Release info discovery")
 
         try:
-            # ====================================================================== 
-            # Simplified flow for testing: load template report relative to this file's directory.
-
-            template_path = Path(__file__).resolve().parent / 'templates' / 'final_k8s_scanner_report.json'
-            with template_path.open('r') as f:
-                final_scanned_obj = json.load(f)
-            print(f"Loaded report from: {template_path}")
-            # ======================================================================
-
-
-            # TODO - Pass value from previous step
-            #final_scanned_obj = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
 
             # Prepare variables to use while assembling the final report
             module_dir = Path(__file__).resolve().parent              # .../starfall/src/starfall
             # repo_root is the project root: .../starfall (one level above 'src')
             repo_root = module_dir.parents[1]                         # .../starfall
             template_dir = module_dir / "templates"                   # templates alongside main.py
+            outputs_dir = repo_root / "outputs"
             tool_report_template = "final_report_tool.py.jinja"
-            emoji_pool = ["☸️", "🚀", "🌟", "🛠️", "⚙️", "📦", "🔧", "🧭", "🛰️", "🌐"]
+            emoji_pool = [
+                "🚀", "🌟", "🛠️", "⚙️", "📦", "🔧", "🧭", "🛰️", "🌐", "🧩",
+                "🔒", "📊", "🧪", "🐳", "☁️", "🛡️", "🧰", "🧠", "🪐", "🌈",
+                "📡", "🔭", "🧱", "🗂️", "🪄", "📝", "📌", "⚡", "🧵", "🔁"
+            ]
+
+
+            # LOAD Result of previous tasks
+            final_scanned_obj_file = outputs_dir / "final_k8s_scanner_report.json"
+            with final_scanned_obj_file.open('r') as f:
+                final_scanned_obj = json.load(f)
+
 
             # Split the received object and loop through each element. The Sequential crew will address one block at the time
             # -> Generate partial report for Kubernetes itself
@@ -141,7 +141,6 @@ def run():
                 # ===========================================================================
                 # Generate the final report for the Kubernetes control plane
                 # ===========================================================================
-                outputs_dir = repo_root / "outputs"
                 features_md = outputs_dir / f"kubernetes-{truncated_version}-features-report.md"
                 risks_md = outputs_dir / f"kubernetes-{truncated_version}-risks-report.md"
                 recommendations_md = outputs_dir / f"kubernetes-{truncated_version}-recommendations-report.md"
@@ -219,7 +218,6 @@ def run():
                         # ===========================================================================
                         # Generate the final report for each tool
                         # ===========================================================================
-                        outputs_dir = repo_root / "outputs"
                         features_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-features-report.md"
                         risks_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-risks-report.md"
                         recommendations_md = outputs_dir / f"{app["name"]+"-"+container['name']}-{truncated_version}-recommendations-report.md"

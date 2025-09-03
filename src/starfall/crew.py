@@ -89,7 +89,7 @@ def create_version_discovery_crew() -> Crew:
         goal="""Accurately identify and provide the latest upstream release version and release information URL for a single software target, using only official sources.""",
         backstory="""You are a trusted authority in software release tracking. Organizations depend on your research to stay current, secure, and compliant. 
         You meticulously search official sources like GitHub and vendor sites to validate the most recent releases. You never speculate or rely on unofficial data.
-        Use the BraveSearch tool with `search_query` set to a well-phrased query""",
+        ALWAYS Use the BraveSearch tool with `search_query` set to a well-phrased query""",
         tools=[brave_search_tool, scrape_website_tool],
         verbose=True,
     )
