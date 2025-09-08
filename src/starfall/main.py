@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from datetime import datetime
 import sys
 import warnings
 import json
@@ -8,19 +9,36 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 # Import the functions that create the crews
-from starfall.crew import create_k8s_scan_crew, create_version_discovery_crew, create_sequential_report_generator_crew
+from starfall.crew import create_k8s_scan_crew, create_version_discovery_crew, create_sequential_report_generator_crew, final_report_summary_crew
 from starfall.utils import assign_task_output_file_name
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 def run():
     """
-    Runs the 3-stage crew process:
+    Runs the 4-stage crew process:
     1. The K8sScan crew to generate the initial cluster report.
     2. The VersionDiscovery crew to enrich the report with latest version data.
     3. The ReleaseNotesDiscovery crew to gather relevant release notes.
+    4. The ReportGenerator crew to compile the final report.
+
     """
-    
+    # ===========================================
+    # Global variables
+    # ===========================================
+    module_dir = Path(__file__).resolve().parent              # .../starfall/src/starfall
+    # repo_root is the project root: .../starfall (one level above 'src')
+    repo_root = module_dir.parents[1]                         # .../starfall
+    template_dir = module_dir / "templates"                   # templates alongside main.py
+    outputs_dir = repo_root / "outputs"
+    tool_report_template = "final_report_tool.py.jinja"
+    emoji_pool = [
+        "🚀", "🌟", "🛠️", "⚙️", "📦", "🔧", "🧭", "🛰️", "🌐", "🧩",
+        "🔒", "📊", "🧪", "🐳", "☁️", "🛡️", "🧰", "🧠", "🪐", "🌈",
+        "📡", "🔭", "🧱", "🗂️", "🪄", "📝", "📌", "⚡", "🧵", "🔁"
+    ]
+
+
     # --- Stage 1: K8sScan Crew ---
     print("--- Running K8sScan crew (Stage 1) ---")
     try:
@@ -53,7 +71,6 @@ def run():
     except Exception as e:
         raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
 
-
     # --- Stage 3: Release info discovery Crew ---
     print("\n--- Running Release info discovery Crew (Stage 3) ---")
 
@@ -72,21 +89,6 @@ def run():
         print("Using Sequential Process Crew for Release info discovery")
 
         try:
-
-            # Prepare variables to use while assembling the final report
-            module_dir = Path(__file__).resolve().parent              # .../starfall/src/starfall
-            # repo_root is the project root: .../starfall (one level above 'src')
-            repo_root = module_dir.parents[1]                         # .../starfall
-            template_dir = module_dir / "templates"                   # templates alongside main.py
-            outputs_dir = repo_root / "outputs"
-            tool_report_template = "final_report_tool.py.jinja"
-            emoji_pool = [
-                "🚀", "🌟", "🛠️", "⚙️", "📦", "🔧", "🧭", "🛰️", "🌐", "🧩",
-                "🔒", "📊", "🧪", "🐳", "☁️", "🛡️", "🧰", "🧠", "🪐", "🌈",
-                "📡", "🔭", "🧱", "🗂️", "🪄", "📝", "📌", "⚡", "🧵", "🔁"
-            ]
-
-
             # LOAD Result of previous tasks
             final_scanned_obj_file = outputs_dir / "final_k8s_scanner_report.json"
             with final_scanned_obj_file.open('r') as f:
@@ -263,8 +265,62 @@ def run():
             #final_report = version_discovery_crew.kickoff(inputs={'k8s_data': k8s_json_output})
             
         except Exception as e:
-            raise Exception(f"An error occurred in VersionDiscovery crew: {e}")
+            raise Exception(f"An error occurred in Release info discovery crew: {e}")
 
+
+    # --- Stage 4: Report Generation and summary ---
+    # 1. Get all individual tools report into a single one
+    # 2. Pass the report to LLM and ask for a short intro summary
+    print("\n--- Running Report Generation and summary (Stage 4) ---")
+    try:
+        print("Join all reports into a single one")
+        pattern = "*upgrade-report.md"
+        # Build dated aggregate filename: dd-mm-yy-all-upgrades-aggregate.md
+        date_prefix = datetime.now().strftime("%d-%m-%y")
+        aggregate_file = outputs_dir / f"{date_prefix}-all-upgrades-aggregate.md"
+
+        # Ensure output directory exists
+        outputs_dir.mkdir(parents=True, exist_ok=True)
+
+        parts = []
+        for path in sorted(outputs_dir.glob(pattern)):
+            # Skip the aggregate file itself if re-running
+            if path.name == aggregate_file.name:
+                continue
+            if path.is_file():
+                content = path.read_text(encoding="utf-8").rstrip()
+                # Add the report content followed by two <br> tags
+                parts.append(content + "\n<br><br>\n---")
+
+        aggregate_file.write_text("\n".join(parts), encoding="utf-8")
+        print(f"Wrote {aggregate_file}")
+
+
+        # ===========================================
+        # Create the crew, configure it and start it
+        # ===========================================
+        report_summary_crew = final_report_summary_crew()
+    
+        print(aggregate_file)
+        # Start the crew
+        report_summary_crew.kickoff(inputs={
+            'file_path': str(aggregate_file),
+        })
+
+        # Post-summary: prepend platform-upgrade.md content to aggregate_file
+        platform_file = outputs_dir / "platform-upgrade.md"
+        if platform_file.exists():
+            try:
+                platform_content = platform_file.read_text(encoding="utf-8").rstrip()
+                current_content = aggregate_file.read_text(encoding="utf-8")
+                platform_file.write_text(platform_content + "\n<br><br>\n---\n# 🔍 Tool Details  \n---\n\n" + current_content, encoding="utf-8")
+            except Exception as e:
+                print(f"Warning: could not prepend platform-upgrade.md content: {e}")
+
+
+
+    except Exception as e:
+        raise Exception(f"An error occurred in Release info discovery crew: {e}")
 
 
 

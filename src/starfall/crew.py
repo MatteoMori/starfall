@@ -1,5 +1,5 @@
 from crewai import Agent, Crew, Process, Task
-from crewai_tools import BraveSearchTool, ScrapeWebsiteTool
+from crewai_tools import BraveSearchTool, ScrapeWebsiteTool, FileReadTool
 
 # Import Custom tools
 from starfall.tools.k8s_scanner import ScanK8sCluster
@@ -7,6 +7,7 @@ from starfall.tools.k8s_scanner import ScanK8sCluster
 # Define tools once
 brave_search_tool = BraveSearchTool(n_results=6)
 scrape_website_tool = ScrapeWebsiteTool()
+file_read_tool = FileReadTool()
 
 
 
@@ -357,6 +358,101 @@ def create_sequential_report_generator_crew() -> Crew:
     return Crew(
         agents=[release_analyst, risk_expert, release_director],
         tasks=[release_notes_task, upgrade_risks_task, final_report_task],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+# --- Final report summary Crew ---
+def final_report_summary_crew() -> Crew:
+    """
+    Reads a report and summarizes the key findings for the Head of Engineering.
+    """
+
+    # ===========================================
+    # Define Agents
+    # ===========================================
+    summary_generator = Agent(
+        role="Director of Engineering",
+        goal="""
+        Read a technical report and distill it into a high-level executive summary,
+        highlighting key business risks, rewards, and strategic priorities for senior leadership.
+        """,
+        backstory="""
+        You are a `Director of Engineering` with a keen eye for business impact.
+        Your main job is to take detailed technical reports and translate them into
+        clear, concise, and actionable summaries for a C-suite or senior management audience.
+        You cut through the noise, focusing on what matters most: strategic opportunities,
+        potential risks, and the overall value proposition of technical changes.
+        
+        You **MUST NOT** invent any information, perform online lookups, or express doubt.
+        Your entire output must be based **SOLEY** on the information inferred from the file
+        provided to you.
+        
+        Your reports are not just summaries—they are a guide for business decisions.
+        """,
+        tools=[file_read_tool],
+        verbose=True,
+    )
+
+    # ===========================================
+    # Define Tasks
+    # ===========================================
+    generate_executive_summary_task = Task(
+        name="Generate Executive Summary",
+        description="""
+        Read the contents of the file located at {file_path}. The file contains detailed technical
+        information about tool upgrades. Your task is to extract the most critical
+        business-focused insights and present them in a concise report.
+
+        1. **Analyze for Business Impact**: Identify and categorize all key information from the file
+        based on its significance to the business:
+        - **Rewards (Features):** What are the most significant new features? How do they
+            translate into developer productivity, operational stability, or business value?
+        - **Risks (Breaking Changes):** What are the highest-severity risks or breaking changes?
+            What is their potential impact on production systems or developer workflows?
+        - **Priority:** Based on the balance of rewards vs. risks, determine the strategic priority
+            of the upgrade (e.g., High, Medium, Low).
+        
+        2. **Synthesize & Format**: Synthesize your findings into the exact markdown report format
+        provided below. Your goal is to fill in the table and key takeaways with the
+        most critical information from the file, without any extra text or commentary.
+        
+        
+        """,
+        expected_output="""
+        # 📰 Starfall Upgrade Report – < Month > < Year >  
+        
+        > **At a glance:** Stay ahead of the curve with Starfall. Below is your **executive snapshot**, followed by detailed **feature spreads** for each tool.  
+        
+        ---
+        
+        ## 🚨 Executive Summary  
+        
+        | Tool | Current → Latest | 🚀 Reward | ⚠️ Risk | 🏷️ Priority |
+        |------|-----------------|-----------|---------|-------------|
+        | **< Tool Name >** | < Current → Latest > | < Rating: ⭐⭐⭐ > | < Rating: ⚠️ Medium > | < Rating: 🔥 High > |
+
+        **Key Takeaway:** - **< Tool Name >** introduces long-awaited **< Key Feature >** 🎉 (< Impact >).  
+        - **< Tool Name >** brings **< Key Feature >** ⚡ (< Impact >).  
+        - **Risks** exist (< brief description of risks >), but Starfall flags them for you.  
+        
+
+        **Rules for Output:**
+        - The output MUST be a single, structured markdown string.
+        - It must follow the exact format, headings, and table structure from the example.
+        - You MUST replace the placeholder data with the actual, extracted data.
+        - It is MISSION CRITICAL that you DO NOT include any commentary, prose, or code fences ( like ```) outside of the formatted report.
+        """,
+        agent=summary_generator,
+        markdown=True,
+        output_file='outputs/platform-upgrade.md',
+    )
+
+
+    return Crew(
+        agents=[summary_generator],
+        tasks=[generate_executive_summary_task],
         process=Process.sequential,
         verbose=True,
     )
