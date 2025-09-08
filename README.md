@@ -43,7 +43,7 @@ Starfall:
 
 * Python (uv + virtualenv)
 * CrewAI for multi‑agent orchestration
-* Ollama (Qwen3) as the local LLM provider
+* GPT-4 as the LLM provider
 * Kubernetes (scan target)
 
 ## Repository Layout (selected)
@@ -63,7 +63,7 @@ Starfall:
 ### 1. Prerequisites
 * Python 3.11+ (align with your local environment)
 * Access to a Kubernetes cluster (or kind/minikube)
-* Ollama installed locally (for Qwen3 model)
+* OpenAI key
 * Git + curl
 
 ### 2. Environment Setup
@@ -81,11 +81,11 @@ uv tool install crewai
 ```
 
 ### 3. Configure LLM Provider
-Ensure Ollama is running and Qwen3 (or your chosen model) is pulled:
+Update `.env` with any required provider configuration
 ```bash
-ollama pull qwen:latest   # or the specific variant you prefer
+BRAVE_API_KEY=Bxxxxxx
+MODEL=gpt-4o-mini
 ```
-Update `.env` with any required provider configuration.
 
 ### 4. (Optional) Regenerate Crew Scaffolding
 ```bash
@@ -184,7 +184,6 @@ See:
 
 | Question | Answer |
 |----------|--------|
-| Why Qwen3 via Ollama? | Local control + good reasoning/price profile |
 | Does it mutate the cluster? | No, read-only scanning (current scope) |
 | How are latest versions resolved? | GitHub releases (initial); pluggable sources planned |
 
