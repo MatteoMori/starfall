@@ -12,7 +12,7 @@ file_read_tool = FileReadTool()
 
 
 # --- K8sScan Crew ---
-def create_k8s_scan_crew() -> Crew:
+def k8s_scan_crew() -> Crew:
     """
     Creates a sequential crew for scanning a Kubernetes cluster.
     """
@@ -61,7 +61,7 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
         - latest_version_info_url: None
     - labels: Dictionary of deployment labels""",
         agent=platform_engineer,
-        output_file='outputs/initial_k8s_scanner_report.json',
+        output_file='outputs/k8s-status/initial_k8s_scanner_report.json',
     )
 
     return Crew(
@@ -72,7 +72,7 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
     )
 
 # --- VersionDiscovery Crew ---
-def create_version_discovery_crew() -> Crew:
+def version_discovery_crew() -> Crew:
     """
     Creates a hierarchical crew for discovering the latest versions.
     The manager agent is responsible for delegating the single task.
@@ -127,7 +127,7 @@ You MUST delegate each lookup as a separate, single-item task. Your output must 
   - latest_version: <Latest available stable release version string>
   - latest_version_info_url: <URL to official release notes or version listing>
 All other fields must be preserved as in the input.""",
-        output_file='outputs/final_k8s_scanner_report.json',
+        output_file='outputs/k8s-status/final_k8s_scanner_report.json',
     )
 
     return Crew(
@@ -140,7 +140,7 @@ All other fields must be preserved as in the input.""",
 
 
 # --- Sequential ReleaseNotesDiscovery Crew ---
-def create_sequential_report_generator_crew() -> Crew:
+def sequential_report_generator_crew() -> Crew:
     """
     Creates a sequential crew for discovering release notes and producing a Markdown report.
     """
@@ -421,7 +421,7 @@ def final_report_summary_crew() -> Crew:
         
         """,
         expected_output="""
-        # 📰 Starfall Upgrade Report – < Month > < Year >  
+        # 📰 Starfall Upgrade Report 
         
         > **At a glance:** Stay ahead of the curve with Starfall. Below is your **executive snapshot**, followed by detailed **feature spreads** for each tool.  
         
