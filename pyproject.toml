@@ -1,8 +1,8 @@
 [project]
 name = "starfall"
-version = "0.1.0"
-description = "starfall using crewAI"
-authors = [{ name = "Your Name", email = "you@example.com" }]
+version = "0.3.1"
+description = "Lookup release notes based on in Cluster tooling"
+authors = [{ name = "Matteo Mori" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai[tools]>=0.157.0,<1.0.0"
@@ -21,3 +21,6 @@ build-backend = "hatchling.build"
 
 [tool.crewai]
 type = "crew"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/starfall"]

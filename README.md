@@ -35,7 +35,7 @@ Starfall:
 | Workload container image version extraction | ✅ | Parses Deployments (selectively via labels)
 | Latest release lookup | ✅ (basic) | Uses external release sources (currently GitHub)
 | Structured task delegation to AI agents | ✅ | CrewAI powered
-| Release notes summarization | ⏳ | Planned enhancement
+| Release notes summarization | ✅ | Planned enhancement
 | Delivery integrations (Slack / GitHub issues) | ⏳ | Planned
 | Safety / diff heuristics | ⏳ | Planned
 
@@ -70,14 +70,12 @@ Starfall:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install ipython
-```
 
-If using `uv` (alternative toolchain):
-```bash
+# Install UV
 curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install crewai
+
+# Install project dependencies
+uv sync --frozen
 ```
 
 ### 3. Configure LLM Provider
@@ -85,80 +83,22 @@ Update `.env` with any required provider configuration
 ```bash
 BRAVE_API_KEY=Bxxxxxx
 MODEL=gpt-4o-mini
+OPENAI_API_KEY=skxxxxxxxxxxxx
 ```
-
-### 4. (Optional) Regenerate Crew Scaffolding
-```bash
-crewai create crew starfall
-```
-Creation output (for reference) is preserved below.
-
-<details>
-  <summary>Scaffolding output</summary>
-
-  ```bash
-  Creating folder starfall...
-  Cache expired or not found. Fetching provider data from the web...
-  ... (provider/model selection prompts) ...
-  Crew starfall created successfully!
-  ```
-</details>
 
 ## Running a Scan (Conceptual Flow)
 
 ```bash
-crewai run
+uv run crewai run
 ```
 
 1. Invoke the scanner tool (code in `k8s_scanner.py`) to produce an initial JSON snapshot (e.g. `initial_k8s_scanner_report.json`).
 2. Agents receive structured tasks derived from that snapshot.
 3. Release intelligence specialist agents look up the latest stable versions.
 4. A manager agent aggregates findings into `final_k8s_scanner_report.json`.
-5. (Planned) Formatter / publisher pushes insights to external destinations.
+5. Crews pick up the JSON file and find release notes.
 
-## Task Delegation Contract
 
-Manager-to-coworker task objects must strictly follow this JSON shape:
-```json
-{
-  "task": "Find the latest stable version for the container 'redis' in the app 'redis-test-app'",
-  "context": "The app object is {\"name\": \"redis-test-app\", \"namespace\": \"starfall-test\", \"deployment\": \"redis-test-app\", \"containers\": [{\"name\": \"redis\", \"image\": \"redis:7.2.0\", \"current_version\": \"7.2.0\"}], \"labels\": {\"app\": \"redis-test-app\", \"starfall.io/enabled\": \"true\"}}",
-  "coworker": "Software Release Intelligence Specialist"
-}
-```
-Consistency here ensures reliable downstream parsing & agent behavior.
-
-## Data Outputs
-
-Example (prettified) structure of a final report:
-```json
-{
-  "kubernetes_control_plane": {
-    "current_version": "v1.x.y",
-    "latest_version": "v1.x.y",
-    "name": "Kubernetes",
-    "scanned_at": "<ISO8601>",
-    "latest_version_info_url": "https://..."
-  },
-  "apps": [
-    {
-      "name": "example-app",
-      "namespace": "example-ns",
-      "deployment": "example-app",
-      "containers": [
-        {
-          "name": "app",
-          "image": "repo/app:1.2.3",
-          "current_version": "1.2.3",
-          "latest_version": "1.3.0",
-          "latest_version_info_url": "https://..."
-        }
-      ],
-      "labels": { "app": "example-app" }
-    }
-  ]
-}
-```
 
 ## Development Notes
 
@@ -171,7 +111,6 @@ Example (prettified) structure of a final report:
 See:
 * `docs/ROADMAP.md`
 * `docs/TOOLS.md`
-* `docs/PERFORMANCE-TRACKING.md`
 
 ## Contributing (Lightweight Process)
 
