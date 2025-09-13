@@ -6,13 +6,6 @@ from datetime import datetime
 from starfall.pydantic_models import K8sClusterScanResult, ClusterInfo, AppInfo, ContainerInfo
 
 
-# class ScanK8sCluster(BaseTool):
-#     name: str = "Scan a Kubernetes Cluster looking for the kubernetes version and Applications to upgrade"
-#     description: str = (
-#         "Scan a Kubernetes cluster, namespaces and deployments that share the same label key and value. "
-#         "The label is starfall.io/enabled = true. "
-#         "Returns a structured dictionary with cluster version, name, scan time, and a list of apps with deployment, namespace, container images, versions, and labels."
-#     )
 class ScanK8sCluster(BaseTool):
     name: str = "Kubernetes Control Plane and Application Inventory Scanner"
     description: str = (
@@ -36,16 +29,15 @@ class ScanK8sCluster(BaseTool):
             except Exception:
                 config.load_kube_config()
 
-            v1 = client.CoreV1Api()
-            apps_v1 = client.AppsV1Api()
+            v1 = client.CoreV1Api()      # Namespaces, Pods, Services, etc.
+            apps_v1 = client.AppsV1Api() # Deployments, Daemonsets, Statefulsets, etc.
 
             # Get cluster version
             version_info = client.VersionApi().get_code()
             cluster_version = getattr(version_info, "git_version", "unknown")
 
-            scanned_at = datetime.utcnow().isoformat() + "Z"
 
-            # Get namespaces matching the label
+            # Identify the namespaces matching the label
             namespaces = v1.list_namespace(label_selector=label_selector)
             ns_names = [ns.metadata.name for ns in namespaces.items]
 
@@ -54,34 +46,24 @@ class ScanK8sCluster(BaseTool):
                 deployments = apps_v1.list_namespaced_deployment(
                     ns, label_selector=label_selector
                 )
-                for dep in deployments.items:
-                    dep_labels = dep.metadata.labels or {}
-                    containers_info = []
-                    for container in dep.spec.template.spec.containers:
-                        image = container.image
-                        image_tag = image.split(":")[1] if ":" in image else "unknown"
-                        containers_info.append(
-                            ContainerInfo(
-                                name=container.name,
-                                image=image,
-                                current_version=image_tag,
-                                latest_version=None,               
-                                latest_version_info_url=None
-                            )
-                        )
-                    app_info = AppInfo(
-                        name=dep.metadata.name,
-                        namespace=ns,
-                        deployment=dep.metadata.name,
-                        containers=containers_info,
-                        labels=dep_labels
-                    )
-                    apps.append(app_info)
+
+                daemonsets = apps_v1.list_namespaced_daemon_set(
+                    ns, label_selector=label_selector
+                )
+
+                # TODO: Optionally include Statefulsets, Jobs, CronJobs, etc.
+
+                # Explore the Deployments and Daemonsets looking for information
+                deployments_info = self.Inspector(apps, deployments, "deployment", ns)
+                apps.extend(deployments_info)
+
+                daemonsets_info = self.Inspector(apps, daemonsets, "daemonset", ns)
+                apps.extend(daemonsets_info)
+
 
             cluster_info = ClusterInfo(
                 current_version=cluster_version,
                 name="Kubernetes",
-                scanned_at=scanned_at,
                 latest_version=None,
                 latest_version_info_url=None
             )
@@ -95,3 +77,38 @@ class ScanK8sCluster(BaseTool):
         except Exception as e:
             # Optionally: You can return a K8sClusterScanResult with an error app entry or raise
             raise RuntimeError(f"Exception during cluster scan: {e}")
+
+
+    def Inspector(self, apps: List[AppInfo], resourceObj: List, resourceKind: str, resourceNamespace: str) -> List[AppInfo]:
+        """
+        Loop though a K8s object and extract relevant information
+        """
+
+        for i in resourceObj.items:
+            labels = i.metadata.labels or {}
+            containers_info = []
+            for container in i.spec.template.spec.containers:
+                image = container.image
+                # Remove any digest suffix (everything after '@') so parsing the tag is reliable
+                base_image = image.split("@", 1)[0] if "@" in image else image
+                image_tag = base_image.split(":")[1] if ":" in base_image else "unknown"
+                containers_info.append(
+                    ContainerInfo(
+                        name=container.name,
+                        image=base_image,
+                        current_version=image_tag,
+                        latest_version=None,               
+                        latest_version_info_url=None
+                    )
+                )
+            app_info = AppInfo(
+                name=i.metadata.name,
+                namespace=resourceNamespace,
+                kind=resourceKind,
+                containers=containers_info,
+                labels=labels
+            )
+            apps.append(app_info)
+
+
+        return apps

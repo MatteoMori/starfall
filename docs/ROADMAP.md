@@ -1,7 +1,10 @@
 # 🛠️ In Progress / Next Up
 - 🔎 Expand K8s scanner to Statefulsets 🧱, Prometheus Kinds 📈, Daemonsets 🛡️
-- 📊 Improve the Final summary report to be more deterministic
+  - Use the chance to review the k8s JSON object
+- 📊 Improve the Final summary report
   - 🎯 Risk score has to be more meaningfull
+  - 🎯 Better naming for Tools
+  - 🎯 K8s has to be the first Tool in the report
 - 🗺️ Update Starfall flow diagram
 
 # 📈 Planned / Future
@@ -11,6 +14,7 @@
   - Check Helm chart `kubeVersion` constraints, CRD and API deprecations, and known breaking compat notes
   - Add report badges: ✅ Compatible, ⚠️ Needs k8s bump, ⛔ Blocked — with a short rationale and source links
   - Influence Priority by increasing Risk when incompatibilities or blockers are detected
+- 📤 Run as kube Cronjob
 - 📤 “Uploader” step
   - Store final Markdown (and optional HTML/PDF) in a central location (GitHub Pages, S3, or similar)
   - Return a stable link and surface upload errors with retries/backoff
@@ -39,6 +43,7 @@
     - [x] Report naming conventions (stable, human-friendly filenames)
     - [x] Cleanup unused env variables and flags
     - [x] Normalize file/folder paths and output locations
+    - [x] Dockerfile + improve Install docs
 
 - ✅ Phase 3
   - 🧭 Define JSON traversal logic

@@ -19,11 +19,11 @@ def k8s_scan_crew() -> Crew:
     platform_engineer = Agent(
         role='Senior Kubernetes Platform Engineer',
         goal="""Deliver a comprehensive, accurate scan of the Kubernetes cluster, identifying all namespaces 
-        and deployments with the label "starfall.io/enabled=true", and reporting details such as deployment names, 
+        and deployments/daemonsets/ets with the label "starfall.io/enabled=true", and reporting details such as resource names, 
         namespaces, container images, image versions, and relevant labels for upgrade planning.""",
         backstory="""As a highly experienced Kubernetes platform engineer, you are responsible for ensuring the safety, reliability, 
         and scalability of infrastructure upgrades. You know that missing even a single versioned container image 
-        or deployment label can lead to outages or security gaps. Your mission is to methodically inspect the cluster, 
+        or resource label can lead to outages or security gaps. Your mission is to methodically inspect the cluster, 
         focusing only on resources marked for Starfall upgrades, and to produce a JSON structured report for downstream 
         automation and human review. You avoid assumptions and ignore resources not explicitly labeled for Starfall.""",
         tools=[ScanK8sCluster()],
@@ -31,16 +31,16 @@ def k8s_scan_crew() -> Crew:
     )
 
     k8s_scanner_task = Task(
-        description="""Perform a meticulous scan of the Kubernetes cluster to identify all namespaces and deployments explicitly labeled with "starfall.io/enabled=true".
-For each matching deployment, extract and report:
+        description="""Perform a meticulous scan of the Kubernetes cluster to identify all namespaces and resource ( deployments/daemonsets/etc ) explicitly labeled with "starfall.io/enabled=true".
+For each matching resource, extract and report:
   - Namespace name
-  - Deployment name
+  - Resource name
   - For every container: name, image, image tag, and current version
-  - All deployment labels
-Additionally, capture the Kubernetes cluster's current version and the timestamp of the scan.
-The output must be a structured, machine-readable, JSON, report that enables downstream agents 
+  - All resource labels
+Additionally, capture the Kubernetes cluster's current version.
+The output must be a structured, machine-readable, JSON, report that enables downstream agents
 and humans to easily assess upgrade eligibility, plan actions, and track changes over time.
-Exclude any deployments or namespaces that do not have the specified label.
+Exclude any resource or namespaces that do not have the specified label.
 Do not perform any upgrade or modification actions; your sole responsibility is to scan and report.""",
         expected_output="""A validated K8sClusterScanResult object with the following structure:
   kubernetes_control_plane:
@@ -48,18 +48,17 @@ Do not perform any upgrade or modification actions; your sole responsibility is 
     latest_version: None
     latest_version_info_url: None
     name: "Kubernetes"
-    scanned_at: <ISO8601 UTC timestamp of scan>
-  apps: List of deployments, each with:
-    - name: <Deployment name>
+  apps: List of resources, each with:
+    - name: <Resource name>
     - namespace: <Namespace name>
-    - deployment: <Deployment identifier>
+    - kind: <Resource kind: Deployment, Daemonset, etc.>
     - containers: List of containers, each with:
         - name: <Container name>
         - image: <Full image path>
         - current_version: <Image tag or version>
         - latest_version: None
         - latest_version_info_url: None
-    - labels: Dictionary of deployment labels""",
+    - labels: Dictionary of resource labels""",
         agent=platform_engineer,
         output_file='outputs/k8s-status/initial_k8s_scanner_report.json',
     )

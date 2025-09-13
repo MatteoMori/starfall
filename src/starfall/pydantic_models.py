@@ -10,7 +10,6 @@ EXAMPLE:
     "current_version": "v1.32.0",
     "latest_version": null,
     "name": "Kubernetes",
-    "scanned_at": "2025-08-16T15:10:42.189015Z",
   },
   "apps": [
     {
@@ -38,7 +37,6 @@ class ClusterInfo(BaseModel):
     latest_version: Optional[str] = None
     latest_version_info_url: Optional[str] = None
     name: str
-    scanned_at: str
 
 class ContainerInfo(BaseModel):
     name: str
@@ -50,7 +48,7 @@ class ContainerInfo(BaseModel):
 class AppInfo(BaseModel):
     name: str
     namespace: str
-    deployment: str
+    kind: str
     containers: List[ContainerInfo]
     labels: Dict[str, str]
 
